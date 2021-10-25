@@ -1,5 +1,10 @@
 use std::env;
 use chrono::prelude::*;
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+
+const JOURNAL_FILE_PATH: &str = "./howdy.journal";
+const JOURNAL_SEPARATOR: char = '|';
 
 struct DailyScore {
     score: i8,
@@ -10,6 +15,12 @@ struct DailyScore {
 pub struct InputArgs {
     score: i8,
     comment: String,
+}
+
+impl DailyScore {
+    pub fn to_s(&self) -> String {
+        format!("{} {} {} {} {}", self.datetime, JOURNAL_SEPARATOR, self.score, JOURNAL_SEPARATOR, self.comment)
+    }
 }
 
 impl InputArgs {
@@ -43,4 +54,20 @@ pub fn run(input_args: InputArgs) {
         "today's score is {}, with comment \"{}\", and its time {}",
         today.score, today.comment, today.datetime
     );
+
+    let open_journal = OpenOptions::new()
+        .read(true)
+        .append(true)
+        .create(true)
+        .open(JOURNAL_FILE_PATH);
+
+    match open_journal {
+        Err(message) => println!("error opening or creating a file: {}", message),
+        Ok(mut file) => {
+            println!("opened file successfully!");
+            if let Err(message) = writeln!(file, "{}", today.to_s()) {
+                println!("error appending to a file: {}", message);
+            }
+        }
+    }
 }
