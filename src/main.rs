@@ -3,7 +3,9 @@ use std::process;
 use howdy::InputArgs;
 
 fn main() {
-    let input_args = InputArgs::parse(env::args()).unwrap_or_else(|err| {
+    let args = env::args();
+
+    let input_args = InputArgs::parse(args).unwrap_or_else(|err| {
         eprintln!("error parsing arguments: {}", err);
         process::exit(1);
     });
