@@ -85,8 +85,8 @@ pub fn run(input_args: InputArgs) {
 mod tests {
     use super::*;
 
-    fn build_args(args_str: &str) -> std::vec::IntoIter<String> {
-        args_str.split(' ').map(|s| s.to_string()).collect::<Vec<String>>().into_iter()
+    fn build_args(args_str: &str) -> impl Iterator<Item = String> + '_ {
+        args_str.split(' ').map(|s| s.to_string())
     }
 
     #[test]
