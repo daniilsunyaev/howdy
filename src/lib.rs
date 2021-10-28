@@ -1,10 +1,12 @@
 use crate::add_command::AddCommand;
+use crate::mood_command::MoodCommand;
 
 const JOURNAL_FILE_PATH: &str = "./howdy.journal";
 const JOURNAL_SEPARATOR: char = '|';
 
 mod daily_score;
 mod add_command;
+mod mood_command;
 
 pub fn run<I>(mut cli_args: I) -> Result<(), &'static str>
     where
@@ -18,6 +20,7 @@ pub fn run<I>(mut cli_args: I) -> Result<(), &'static str>
 
     match command.as_str() {
         "add" => AddCommand::parse(cli_args)?.run(),
+        "mood" => (MoodCommand {}).run(),
         _ => return Err("command is not recognized"),
     }
 

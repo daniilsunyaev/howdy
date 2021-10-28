@@ -36,7 +36,7 @@ impl AddCommand {
             .open(crate::JOURNAL_FILE_PATH);
 
         match open_journal {
-            Err(message) => println!("error opening or creating a file: {}", message),
+            Err(message) => println!("error opening or creating journal file: {}", message), // TODO: use return Err instead
             Ok(mut file) => {
                 println!("opened file successfully!");
                 if let Err(message) = writeln!(file, "{}", self.daily_score.to_s()) {
