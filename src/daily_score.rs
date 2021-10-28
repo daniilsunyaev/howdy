@@ -9,6 +9,10 @@ pub struct DailyScore {
 }
 
 impl DailyScore {
+    pub fn new() -> Self {
+        Self { score: 0, comment: "".to_string(), datetime: Utc::now() }
+    }
+
     pub fn to_s(&self) -> String {
         format!("{} {} {} {} {}", self.datetime.format(DATE_FORMAT), crate::JOURNAL_SEPARATOR, self.score, crate::JOURNAL_SEPARATOR, self.comment)
     }
@@ -55,5 +59,13 @@ mod tests {
         assert_eq!(daily_score.score, 1);
         assert_eq!(daily_score.comment, "foo || bar");
         assert_eq!(Utc.ymd(2020, 2, 1).and_hms(9, 10, 11), daily_score.datetime);
+    }
+
+    #[test]
+    fn new_defaults() {
+        let daily_score = DailyScore::new();
+
+        assert_eq!(daily_score.score, 0);
+        assert_eq!(daily_score.comment, "");
     }
 }
