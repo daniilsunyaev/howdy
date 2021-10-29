@@ -7,6 +7,7 @@ const JOURNAL_SEPARATOR: char = '|';
 mod daily_score;
 mod add_command;
 mod mood_command;
+mod mood_report;
 
 pub fn run<I>(mut cli_args: I) -> Result<(), &'static str>
     where

@@ -1,7 +1,9 @@
-use std::io::prelude::*;
+use std::io::prelude::*; // TODO: get rid of glob imports
 use std::io::BufReader;
 use std::fs::OpenOptions;
+
 use crate::daily_score::DailyScore;
+use crate::mood_report::MoodReport;
 
 pub struct MoodCommand {
 }
@@ -32,10 +34,11 @@ impl MoodCommand {
             }
         }
 
-        println!("collected records:");
-        for record in records {
-            println!("{}", record.to_s());
-        }
+        let mood_report = MoodReport::from_daily_scores(records);
+
+        println!("30-days mood: {}", mood_report.thirty_days_mood());
+        println!("365-days mood: {}", mood_report.yearly_mood());
+
         Ok(())
     }
 }

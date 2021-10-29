@@ -1,4 +1,4 @@
-use chrono::prelude::*;
+use chrono::prelude::*; // TODO: get rid of glob imports
 
 const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 
@@ -9,8 +9,14 @@ pub struct DailyScore {
 }
 
 impl DailyScore {
+    #[cfg(test)]
     pub fn new() -> Self {
         Self { score: 0, comment: "".to_string(), datetime: Utc::now() }
+    }
+
+    #[cfg(test)]
+    pub fn with_score(score: i8) -> Self {
+        Self { score, ..Self::new() }
     }
 
     pub fn to_s(&self) -> String {
@@ -66,6 +72,14 @@ mod tests {
         let daily_score = DailyScore::new();
 
         assert_eq!(daily_score.score, 0);
+        assert_eq!(daily_score.comment, "");
+    }
+
+    #[test]
+    fn new_with_score() {
+        let daily_score = DailyScore::with_score(5);
+
+        assert_eq!(daily_score.score, 5);
         assert_eq!(daily_score.comment, "");
     }
 }
