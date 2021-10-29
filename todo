@@ -1,13 +1,14 @@
 1. ✓ record struct
 2. ✓ write record to end of file
 3. ✓ read array of records from file
-4. return monthly/yearly average
+4. ✓ return monthly/yearly average
 5. fix todo issue with returned info (probablu should use String in err instead of &str)
 6. gather test helpers in a single place
 7. return montly avarage time report
 8. remove glob imports for chrono/io
 9. allow to optionally specify filename
 10. add and use some rust extended linter (probably clippy)
-10. add optional tags
-11. add export to gnu plot
-12. add export to xcel or open office calc format
+11. add readme
+12. add optional tags
+13. add export to gnu plot
+14. add export to xcel or open office calc format

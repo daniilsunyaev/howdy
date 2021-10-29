@@ -29,22 +29,25 @@ impl MoodReport {
     pub fn thirty_days_mood(&self) -> i32 {
         let thirty_days_ago = Utc::now() - Duration::days(40);
 
-        self.daily_scores
-            .iter()
-            .filter(|daily_score| daily_score.datetime >= thirty_days_ago)
-            .map(|daily_score| daily_score.score as i32)
-            .sum()
+        self.filter_mood_sum(|daily_score| daily_score.datetime >= thirty_days_ago)
     }
 
     pub fn yearly_mood(&self) -> i32 {
         let usual_year_ago = Utc::now() - Duration::days(365);
 
-        self.daily_scores
-            .iter()
-            .filter(|daily_score| daily_score.datetime >= usual_year_ago)
-            .map(|daily_score| daily_score.score as i32)
-            .sum()
+        self.filter_mood_sum(|daily_score| daily_score.datetime >= usual_year_ago)
     }
+
+    fn filter_mood_sum<F>(&self, filter_fn: F) -> i32
+        where
+            F: Fn(&&DailyScore) -> bool,
+        {
+            self.daily_scores
+                .iter()
+                .filter(filter_fn)
+                .map(|daily_score| daily_score.score as i32)
+                .sum()
+        }
 }
 
 #[cfg(test)]
