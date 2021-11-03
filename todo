@@ -2,13 +2,14 @@
 2. ✓ write record to end of file
 3. ✓ read array of records from file
 4. ✓ return monthly/yearly average
-5. fix todo issue with returned info (probablu should use String in err instead of &str)
+5. ✓ fix todo issue with returned info (probablu should use String in err instead of &str)
 6. gather test helpers in a single place
 7. return montly avarage time report
-8. remove glob imports for chrono/io
-9. allow to optionally specify filename
-10. add and use some rust extended linter (probably clippy)
-11. add readme
-12. add optional tags
-13. add export to gnu plot
-14. add export to xcel or open office calc format
+8. forward io error messages to the top
+9. remove glob imports for chrono/io
+10. allow to optionally specify filename
+11. add and use some rust extended linter (probably clippy)
+12. add readme
+13. add optional tags
+14. add export to gnu plot
+15. add export to xcel or open office calc format
