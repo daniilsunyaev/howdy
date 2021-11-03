@@ -1,6 +1,7 @@
 use std::io::prelude::*; // TODO: get rid of glob imports
 use std::io::BufReader;
 use std::fs::OpenOptions;
+use std::fmt;
 
 use crate::daily_score::DailyScore;
 use crate::mood_report::MoodReport;
@@ -8,30 +9,40 @@ use crate::mood_report::MoodReport;
 pub struct MoodCommand {
 }
 
-impl MoodCommand {
-    pub fn run(&self) -> Result<(), &'static str> {
-        let mut records = Vec::<DailyScore>::new();
-        let open_journal = OpenOptions::new()
-            .read(true)
-            .open(crate::JOURNAL_FILE_PATH);
+#[derive(Debug, PartialEq)]
+pub enum MoodCommandError {
+    CannotOpenFile,
+    CannotReadLine,
+    DailyScoreParseError,
+}
 
-        match open_journal {
-            Err(message) => println!("error opening journal file: {}", message),
-            Ok(file) => {
-                let reader = BufReader::new(file);
-                for line in reader.lines() {
-                    match line {
-                        Err(_message) => return Err("error reading the line"),
-                        Ok(line) => {
-                            if let Ok(daily_score) = DailyScore::parse(&line) {
-                                records.push(daily_score);
-                            } else {
-                                return Err("error parsing the line");
-                            }
-                        }
-                    }
-                }
-            }
+impl fmt::Display for MoodCommandError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MoodCommandError::CannotOpenFile => write!(f, "error opening journal file"),
+            MoodCommandError::CannotReadLine => write!(f, "error reading the line"),
+            MoodCommandError::DailyScoreParseError => write!(f, "error parsing the line"),
+        }
+    }
+}
+
+impl MoodCommand {
+    pub fn run(&self) -> Result<(), MoodCommandError> {
+        let mut records = Vec::<DailyScore>::new();
+
+        let file = OpenOptions::new()
+            .read(true)
+            .open(crate::JOURNAL_FILE_PATH)
+            .map_err(|_| MoodCommandError::CannotOpenFile)?; //TODO: do not omit io error
+
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            let daily_score = DailyScore::parse(line
+                                                .map_err(|_| MoodCommandError::CannotReadLine)?
+                                                .as_str())
+                .map_err(|_| MoodCommandError::DailyScoreParseError)?;
+
+            records.push(daily_score);
         }
 
         let mood_report = MoodReport::from_daily_scores(records);
@@ -52,5 +63,12 @@ mod tests {
         let mood = MoodCommand {};
 
         assert_eq!(mood.run().is_err(), false);
+    }
+
+    #[test]
+    fn error_descriptions() {
+        assert_eq!(format!("{}", MoodCommandError::CannotOpenFile), "error opening journal file");
+        assert_eq!(format!("{}", MoodCommandError::CannotReadLine), "error reading the line");
+        assert_eq!(format!("{}", MoodCommandError::DailyScoreParseError), "error parsing the line");
     }
 }
