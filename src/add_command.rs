@@ -62,12 +62,8 @@ impl AddCommand {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_helpers::build_cli_args;
     use super::*;
-
-    fn build_args(args_str: &str) -> impl Iterator<Item = String> + '_ {
-        args_str.split(' ').map(|s| s.to_string())
-    }
-
 
     #[test]
     fn no_add_args_error_description() {
@@ -88,7 +84,7 @@ mod tests {
 
     #[test]
     fn wrong_score_error() {
-        let args = build_args("x");
+        let args = build_cli_args("x");
 
         assert_eq!(AddCommand::parse(args.into_iter()).err().unwrap(), AddCommandError::InvalidDailyScore);
     }
@@ -105,7 +101,7 @@ mod tests {
 
     #[test]
     fn correct_args() {
-        let args = build_args("-1 how  are you");
+        let args = build_cli_args("-1 how  are you");
         let parsed = AddCommand::parse(args);
 
         assert_eq!(parsed.is_ok(), true);

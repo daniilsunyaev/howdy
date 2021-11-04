@@ -10,6 +10,7 @@ mod daily_score;
 mod add_command;
 mod mood_command;
 mod mood_report;
+mod test_helpers;
 
 #[derive(Debug, PartialEq)]
 pub enum CliError {
@@ -60,11 +61,8 @@ pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
 
 #[cfg(test)]
 mod tests {
+    use crate::test_helpers::build_cli_args;
     use super::*;
-
-    fn build_args(args_str: &str) -> impl Iterator<Item = String> + '_ {
-        args_str.split(' ').map(|s| s.to_string())
-    }
 
     #[test]
     fn no_command_error() {
@@ -80,7 +78,7 @@ mod tests {
 
     #[test]
     fn wrong_command_error() {
-        let args = build_args("exec/path foo");
+        let args = build_cli_args("exec/path foo");
 
         assert_eq!(run(args).err(), Some(CliError::CommandNotRecognized));
     }
@@ -92,7 +90,7 @@ mod tests {
 
     #[test]
     fn no_add_args_error() {
-        let args = build_args("exec/path add");
+        let args = build_cli_args("exec/path add");
 
         assert_eq!(run(args.into_iter()).err(), Some(CliError::AddCommandError(AddCommandError::MissingDailyScore)));
         assert_eq!(format!("{}", CliError::AddCommandError(AddCommandError::MissingDailyScore)),
