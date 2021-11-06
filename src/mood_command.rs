@@ -49,6 +49,7 @@ impl MoodCommand {
 
         println!("30-days mood: {}", mood_report.thirty_days_mood());
         println!("365-days mood: {}", mood_report.yearly_mood());
+        println!("30-days moving mood: {:?}", mood_report.thirty_days_moving_mood());
 
         Ok(())
     }

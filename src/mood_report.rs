@@ -27,7 +27,7 @@ impl MoodReport {
     }
 
     pub fn thirty_days_mood(&self) -> i32 {
-        let thirty_days_ago = Utc::now() - Duration::days(40);
+        let thirty_days_ago = Utc::now() - Duration::days(30);
 
         self.filter_mood_sum(|daily_score| daily_score.datetime >= thirty_days_ago)
     }
@@ -36,6 +36,10 @@ impl MoodReport {
         let usual_year_ago = Utc::now() - Duration::days(365);
 
         self.filter_mood_sum(|daily_score| daily_score.datetime >= usual_year_ago)
+    }
+
+    pub fn thirty_days_moving_mood(&self) -> Vec<i32> {
+        self.timeframed_moving_mood_report(30, 0, 30)
     }
 
     fn filter_mood_sum<F>(&self, filter_fn: F) -> i32
@@ -48,6 +52,22 @@ impl MoodReport {
                 .map(|daily_score| daily_score.score as i32)
                 .sum()
         }
+
+    fn timeframed_moving_mood_report(&self, starts_at_days_ago: u32, ends_at_days_ago: u32, frame_size: u32) -> Vec<i32> {
+        let mut hist = Vec::new();
+        hist.reserve((starts_at_days_ago - ends_at_days_ago) as usize);
+
+        for frame_starts_at_days_ago in ((ends_at_days_ago + frame_size)..(starts_at_days_ago + frame_size)).rev() {
+            let sum = self
+                .filter_mood_sum(|daily_score| {
+                    daily_score.datetime >= Utc::now() - Duration::days(frame_starts_at_days_ago as i64) &&
+                        daily_score.datetime <= Utc::now() - Duration::days(frame_starts_at_days_ago as i64) + Duration::days(frame_size as i64)
+                });
+            hist.push(sum);
+        }
+
+        hist
+    }
 }
 
 #[cfg(test)]
@@ -90,6 +110,34 @@ mod tests {
             MoodReport::from_daily_scores(vec![daily_score, another_daily_score, old_daily_score]);
 
         assert_eq!(mood_report.thirty_days_mood(), 3);
+    }
+
+    #[test]
+    fn thirty_days_moving_mood() {
+        let today_daily_score = DailyScore::with_score(1);
+        let beginning_of_month_daily_score =
+            DailyScore { score: -1, comment: "".to_string(), datetime: Utc::now() - Duration::days(25) - Duration::minutes(1) };
+        let fifty_days_ago_daily_score =
+            DailyScore { score: 2, comment: "".to_string(), datetime: Utc::now() - Duration::days(50) + Duration::minutes(1) };
+        let ninty_days_ago_daily_score =
+            DailyScore { score: 20, comment: "".to_string(), datetime: Utc::now() - Duration::days(90) };
+
+        let mood_report = MoodReport::from_daily_scores(
+            vec![
+                beginning_of_month_daily_score,
+                fifty_days_ago_daily_score,
+                ninty_days_ago_daily_score,
+                today_daily_score
+            ]
+        );
+
+        assert_eq!(mood_report.thirty_days_moving_mood(),
+            vec![
+                2, 2, 2, 2, 1, 1, 1, 1, 1, 1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,
+            ]
+        );
     }
 
     #[test]
