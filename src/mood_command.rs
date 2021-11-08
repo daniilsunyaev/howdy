@@ -1,5 +1,4 @@
-use std::io::prelude::*; // TODO: get rid of glob imports
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::fs::OpenOptions;
 use std::fmt;
 

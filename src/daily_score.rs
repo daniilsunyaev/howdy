@@ -1,4 +1,4 @@
-use chrono::prelude::*; // TODO: get rid of glob imports
+use chrono::prelude::{DateTime, Utc};
 
 const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 

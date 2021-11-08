@@ -6,7 +6,7 @@
 6. ✓ gather test helpers in a single place
 7. ✓ return montly avarage time report
 8. forward io error messages to the top
-9. remove glob imports for chrono/io
+9. ✓ remove glob imports for chrono/io
 10. allow to optionally specify filename
 11. extract daily score creation methods to factory or builder object
 12. allow to specify mood report type
