@@ -1,7 +1,8 @@
 use chrono::prelude::*;
 use std::io::prelude::*;
 use std::fs::OpenOptions;
-use std::fmt;
+use std::io;
+use std::num;
 
 use crate::daily_score::DailyScore;
 
@@ -12,20 +13,9 @@ pub struct AddCommand {
 #[derive(Debug, PartialEq)]
 pub enum AddCommandError {
     MissingDailyScore,
-    InvalidDailyScore,
-    CannotOpenFile,
-    CannotWriteToFile,
-}
-
-impl fmt::Display for AddCommandError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            AddCommandError::MissingDailyScore => write!(f, "failed to get daily score"),
-            AddCommandError::InvalidDailyScore => write!(f, "failed to parse daily score"),
-            AddCommandError::CannotOpenFile => write!(f, "cannot open or create journal file"),
-            AddCommandError::CannotWriteToFile => write!(f, "cannot write to journal file"),
-        }
-    }
+    InvalidDailyScore { score_string: String, parse_error: num::IntErrorKind },
+    CannotOpenFile { file_path: String, open_error: io::ErrorKind },
+    CannotWriteToFile { file_path: String, write_error: io::ErrorKind },
 }
 
 impl AddCommand {
@@ -33,10 +23,11 @@ impl AddCommand {
     where
         I: Iterator<Item = String>,
     {
-        let score = args.next()
-            .ok_or(AddCommandError::MissingDailyScore)?
-            .parse::<i8>()
-            .map_err(|_| AddCommandError::InvalidDailyScore)?;
+        let score_string = args.next()
+            .ok_or(AddCommandError::MissingDailyScore)?;
+
+        let score = score_string.parse::<i8>()
+            .map_err(|parse_error| AddCommandError::InvalidDailyScore { score_string: score_string, parse_error: parse_error.kind().clone() })?;
 
         let comment: String = args.collect::<Vec<String>>().join(" ");
 
@@ -46,15 +37,16 @@ impl AddCommand {
     }
 
     pub fn run(&self) -> Result<(), AddCommandError> {
+        let file_path = crate::JOURNAL_FILE_PATH.to_string();
         let mut file = OpenOptions::new()
             .read(true)
             .append(true)
             .create(true)
-            .open(crate::JOURNAL_FILE_PATH)
-            .map_err(|_| AddCommandError::CannotOpenFile)?;
+            .open(file_path.clone())
+            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: file_path.clone(), open_error: open_error.kind() })?;
 
         writeln!(file, "{}", self.daily_score.to_s())
-            .map_err(|_| AddCommandError::CannotWriteToFile)?;
+            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path, write_error: write_error.kind() })?;
 
         Ok(())
     }
@@ -66,11 +58,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn no_add_args_error_description() {
-        assert_eq!(format!("{}", AddCommandError::MissingDailyScore), "failed to get daily score");
-    }
-
-    #[test]
     fn no_add_args_error() {
         let args = None;
 
@@ -78,25 +65,27 @@ mod tests {
     }
 
     #[test]
-    fn wrong_score_error_description() {
-        assert_eq!(format!("{}", AddCommandError::InvalidDailyScore), "failed to parse daily score");
-    }
-
-    #[test]
     fn wrong_score_error() {
         let args = build_cli_args("x");
 
-        assert_eq!(AddCommand::parse(args.into_iter()).err().unwrap(), AddCommandError::InvalidDailyScore);
+        assert_eq!(AddCommand::parse(args.into_iter()).err().unwrap(),
+            AddCommandError::InvalidDailyScore { score_string: "x".to_string(), parse_error: num::IntErrorKind::InvalidDigit });
     }
 
     #[test]
-    fn cannot_open_file_error_description() {
-        assert_eq!(format!("{}", AddCommandError::CannotOpenFile), "cannot open or create journal file");
+    fn big_score_error() {
+        let args = build_cli_args("254");
+
+        assert_eq!(AddCommand::parse(args.into_iter()).err().unwrap(),
+            AddCommandError::InvalidDailyScore { score_string: "254".to_string(), parse_error: num::IntErrorKind::PosOverflow });
     }
 
     #[test]
-    fn cannot_write_to_file_error_description() {
-        assert_eq!(format!("{}", AddCommandError::CannotWriteToFile), "cannot write to journal file");
+    fn small_score_error() {
+        let args = build_cli_args("-250");
+
+        assert_eq!(AddCommand::parse(args.into_iter()).err().unwrap(),
+            AddCommandError::InvalidDailyScore { score_string: "-250".to_string(), parse_error: num::IntErrorKind::NegOverflow });
     }
 
     #[test]

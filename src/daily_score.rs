@@ -8,6 +8,14 @@ pub struct DailyScore {
     pub datetime: DateTime<Utc>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum DailyScoreParseError {
+    MissingDateTime,
+    InvalidDateTime(String),
+    MissingScore,
+    InvalidScore(String),
+}
+
 impl DailyScore {
     #[cfg(test)]
     pub fn new() -> Self {
@@ -23,27 +31,30 @@ impl DailyScore {
         format!("{} {} {} {} {}", self.datetime.format(DATE_FORMAT), crate::JOURNAL_SEPARATOR, self.score, crate::JOURNAL_SEPARATOR, self.comment)
     }
 
-    pub fn parse(daily_score_string: &str) -> Result<Self, &str> { // TODO: prob should use box dyn error or something
+    pub fn parse(daily_score_string: &str) -> Result<Self, DailyScoreParseError> {
         let mut slice = daily_score_string.splitn(3, " | "); // TODO: use separator instead
 
-        let datetime_str = slice.next().unwrap_or("");
-        if let Ok(datetime) = DateTime::parse_from_str(datetime_str, DATE_FORMAT) {
-            let score_str = slice.next().unwrap_or("");
+        let datetime_str = slice.next()
+            .ok_or(DailyScoreParseError::MissingDateTime)?;
 
-            if let Ok(score) = score_str.parse::<i8>() {
-                let comment = slice.next().unwrap_or("").to_string();
-                let datetime: DateTime<Utc> = DateTime::from(datetime);
-                Ok(DailyScore { score, comment, datetime })
-            } else {
-                Err("failed to parse score")
-            }
-        } else {
-            Err("failed to parse datetime")
-        }
+        let datetime = DateTime::parse_from_str(datetime_str, DATE_FORMAT)
+            .map_err(|_| DailyScoreParseError::InvalidDateTime(datetime_str.to_string()))?;
+
+        let score_str = slice.next()
+            .ok_or(DailyScoreParseError::MissingScore)?;
+
+        let score = score_str.parse::<i8>()
+            .map_err(|_| DailyScoreParseError::InvalidScore(score_str.to_string()))?;
+
+        let comment = slice.next().unwrap_or("").to_string();
+        let datetime: DateTime<Utc> = DateTime::from(datetime);
+        Ok(DailyScore { score, comment, datetime })
     }
 }
 
 #[cfg(test)]
+use chrono::prelude::TimeZone;
+
 mod tests {
     use super::*;
 
@@ -65,6 +76,29 @@ mod tests {
         assert_eq!(daily_score.score, 1);
         assert_eq!(daily_score.comment, "foo || bar");
         assert_eq!(Utc.ymd(2020, 2, 1).and_hms(9, 10, 11), daily_score.datetime);
+    }
+
+    #[test]
+    fn invalid_string_parsing() {
+        assert_eq!(DailyScore::parse("").err().unwrap(), DailyScoreParseError::InvalidDateTime("".to_string()));
+        assert_eq!(DailyScore::parse("fooo").err().unwrap(),
+            DailyScoreParseError::InvalidDateTime("fooo".to_string()));
+
+        assert_eq!(DailyScore::parse("foo|").err().unwrap(),
+            DailyScoreParseError::InvalidDateTime("foo|".to_string()));
+
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000|").err().unwrap(),
+            DailyScoreParseError::InvalidDateTime("2020-02-01 09:10:11 +0000|".to_string()));
+
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000").err().unwrap(), DailyScoreParseError::MissingScore);
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | ").err().unwrap(),
+            DailyScoreParseError::InvalidScore("".to_string()));
+
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | foo").err().unwrap(),
+            DailyScoreParseError::InvalidScore("foo".to_string()));
+
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | 4|").err().unwrap(),
+            DailyScoreParseError::InvalidScore("4|".to_string()));
     }
 
     #[test]
