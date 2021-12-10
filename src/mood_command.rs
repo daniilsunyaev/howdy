@@ -49,15 +49,3 @@ impl MoodCommand {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn no_args_ok() {
-        let mood = MoodCommand {};
-
-        assert_eq!(mood.run().is_err(), false);
-    }
-}

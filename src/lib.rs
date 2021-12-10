@@ -15,33 +15,39 @@ mod mood_command;
 mod mood_report;
 mod test_helpers;
 
-pub enum CommandSelectError {
+#[derive(Debug, PartialEq)]
+pub enum CliError {
     CommandNotProvided,
     CommandNotRecognized(String),
+    AddCommandArgsMissingDailyScore,
+    AddCommandArgsInvalidDailyScore { score_string: String, parse_error: num::IntErrorKind },
+    CommandExecutionError(String),
 }
-
-#[derive(Debug, PartialEq)]
-pub struct CliError(String);
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<AddCommandError> for CliError {
-    fn from(error: add_command::AddCommandError) -> Self {
-        let message = match error {
-            AddCommandError::MissingDailyScore => ("daily score is not provided").to_string(),
-            AddCommandError::InvalidDailyScore { score_string, parse_error } => {
+        let message = match self {
+            CliError::CommandNotProvided => format!("command is not provided"),
+            CliError::CommandNotRecognized(command) => format!("command '{}' is not recognized", command),
+            CliError::AddCommandArgsMissingDailyScore => "daily score is not provided for add command".to_string(),
+            CliError::AddCommandArgsInvalidDailyScore { score_string, parse_error } => {
                 let submessage = match parse_error {
                     num::IntErrorKind::InvalidDigit => format!("'{}' is not a valid integer", score_string),
                     num::IntErrorKind::PosOverflow =>  format!("'{}' is too big", score_string),
                     num::IntErrorKind::NegOverflow =>  format!("'{}' is too small", score_string),
                     _ => "unknown error".to_string(),
                 };
-                format!("failed to parse daily score: {}", submessage)
+                format!("failed to parse daily score for add command: {}", submessage)
             },
+            CliError::CommandExecutionError(message) => message.to_string(),
+        };
+        write!(f, "{}", message)
+    }
+}
+
+impl From<AddCommandError> for CliError {
+    fn from(error: add_command::AddCommandError) -> Self {
+        let message = match error {
             AddCommandError::CannotOpenFile { file_path, open_error } => {
                 let submessage = match open_error {
                     io::ErrorKind::PermissionDenied => "permission denied".to_string(),
@@ -58,7 +64,7 @@ impl From<AddCommandError> for CliError {
             }
         };
 
-        Self(format!("add command failed: {}", message))
+        CliError::CommandExecutionError(format!("add command failed:\n{}", message))
     }
 }
 
@@ -85,32 +91,40 @@ impl From<MoodCommandError> for CliError {
             }
         };
 
-        Self(format!("mood command failed: {}", message))
+        CliError::CommandExecutionError(format!("mood command failed:\n{}", message))
     }
 }
 
-impl From<CommandSelectError> for CliError {
-    fn from(error: CommandSelectError) -> Self {
-        let message = match error {
-            CommandSelectError::CommandNotProvided => format!("command is not provided"),
-            CommandSelectError::CommandNotRecognized(command) => format!("command '{}' is not recognized", command),
-        };
+fn parse_add_command_args<I>(mut args: I) -> Result<AddCommand, CliError>
+    where
+    I: Iterator<Item = String>,
+{
+    let score_string = args.next()
+        .ok_or(CliError::AddCommandArgsMissingDailyScore)?;
 
-        Self(message)
-    }
+    let score = score_string.parse::<i8>()
+        .map_err(|parse_error| CliError::AddCommandArgsInvalidDailyScore {
+            score_string: score_string,
+            parse_error: parse_error.kind().clone(),
+        })?;
+
+    let comment: String = args.collect::<Vec<String>>().join(" ");
+
+    return Ok(AddCommand { score, comment: Some(comment), datetime: None })
 }
+
 
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
     where
         I: Iterator<Item = String>,
     {
     cli_args.next(); // skip exec filename
-    let command = cli_args.next().ok_or(CommandSelectError::CommandNotProvided)?;
+    let command = cli_args.next().ok_or(CliError::CommandNotProvided)?;
 
     match command.as_str() {
-        "add" => Ok(AddCommand::parse(cli_args)?.run()?),
+        "add" => Ok(parse_add_command_args(cli_args)?.run()?),
         "mood" => Ok((MoodCommand {}).run()?),
-        unrecognized_command => Err(CliError::from(CommandSelectError::CommandNotRecognized(unrecognized_command.to_string()))),
+        unrecognized_command => Err(CliError::CommandNotRecognized(unrecognized_command.to_string())),
     }
 }
 
@@ -125,77 +139,111 @@ mod tests {
     #[test]
     fn no_command_error() {
         let args = Vec::new();
+        let result_err = run(args.into_iter()).err().unwrap();
 
-        assert_eq!(run(args.into_iter()).unwrap_err(), CliError("command is not provided".to_string()));
+        assert_eq!(result_err, CliError::CommandNotProvided);
+        assert_eq!(format!("{}", result_err), "command is not provided".to_string());
     }
 
     #[test]
     fn wrong_command_error() {
         let args = build_cli_args("exec/path foo");
+        let result_err = run(args.into_iter()).err().unwrap();
 
-        assert_eq!(run(args).unwrap_err(), CliError("command 'foo' is not recognized".to_string()));
+        assert_eq!(result_err, CliError::CommandNotRecognized("foo".to_string()));
+        assert_eq!(format!("{}", result_err), "command 'foo' is not recognized");
     }
 
     #[test]
     fn no_add_args_error() {
         let args = build_cli_args("exec/path add");
+        let result_err = run(args.into_iter()).err().unwrap();
 
-        assert_eq!(run(args.into_iter()).unwrap_err(),
-            CliError("add command failed: daily score is not provided".to_string()));
+        assert_eq!(result_err, CliError::AddCommandArgsMissingDailyScore);
+        assert_eq!(format!("{}", result_err),
+            "daily score is not provided for add command")
+    }
+
+    #[test]
+    fn wrong_add_score_error() {
+        let args = build_cli_args("exec/path add x");
+        let result_err = run(args.into_iter()).err().unwrap();
+
+        assert_eq!(result_err,
+            CliError::AddCommandArgsInvalidDailyScore {
+                score_string: "x".to_string(),
+                parse_error: num::IntErrorKind::InvalidDigit,
+            });
+        assert_eq!(format!("{}", result_err),
+            "failed to parse daily score for add command: 'x' is not a valid integer".to_string())
+    }
+
+    #[test]
+    fn big_add_score_error() {
+        let args = build_cli_args("exec/path add 254");
+        let result_err = run(args.into_iter()).err().unwrap();
+
+        assert_eq!(result_err,
+            CliError::AddCommandArgsInvalidDailyScore {
+                score_string: "254".to_string(),
+                parse_error: num::IntErrorKind::PosOverflow,
+            });
+
+        assert_eq!(format!("{}", result_err),
+            "failed to parse daily score for add command: '254' is too big".to_string());
+    }
+
+    #[test]
+    fn small_add_score_error() {
+        let args = build_cli_args("exec/path add -250");
+        let result_err = run(args.into_iter()).err().unwrap();
+
+        assert_eq!(result_err,
+            CliError::AddCommandArgsInvalidDailyScore {
+                score_string: "-250".to_string(),
+                parse_error: num::IntErrorKind::NegOverflow,
+            });
+
+        assert_eq!(format!("{}", result_err),
+            "failed to parse daily score for add command: '-250' is too small".to_string());
     }
 
     #[test]
     fn add_command_error_consumption() {
-        assert_eq!(CliError::from(AddCommandError::MissingDailyScore).0,
-            "add command failed: daily score is not provided");
-
-        assert_eq!(
-            CliError::from(
-                AddCommandError::InvalidDailyScore { score_string: "x".to_string(), parse_error: num::IntErrorKind::InvalidDigit }
-            ).0,
-            "add command failed: failed to parse daily score: 'x' is not a valid integer".to_string()
-        );
-
-        assert_eq!(
-            CliError::from(
-                AddCommandError::InvalidDailyScore { score_string: "254".to_string(), parse_error: num::IntErrorKind::PosOverflow }
-            ).0,
-            "add command failed: failed to parse daily score: '254' is too big".to_string()
-        );
-
-        assert_eq!(
-            CliError::from(
-                AddCommandError::InvalidDailyScore { score_string: "-250".to_string(), parse_error: num::IntErrorKind::NegOverflow }
-            ).0,
-            "add command failed: failed to parse daily score: '-250' is too small".to_string()
-        );
-
         assert_eq!(
             CliError::from(
                 AddCommandError::CannotOpenFile { file_path: "~/path".to_string(), open_error: io::ErrorKind::PermissionDenied }
-            ).0,
-            "add command failed: cannot open or create journal file '~/path': permission denied".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "add command failed:\ncannot open or create journal file '~/path': permission denied".to_string()
+            )
         );
 
         assert_eq!(
             CliError::from(
                 AddCommandError::CannotOpenFile { file_path: "~/path".to_string(), open_error: io::ErrorKind::AddrInUse }
-            ).0,
-            "add command failed: cannot open or create journal file '~/path': unknown error".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "add command failed:\ncannot open or create journal file '~/path': unknown error".to_string()
+            )
         );
 
         assert_eq!(
             CliError::from(
                 AddCommandError::CannotWriteToFile { file_path: "~/path".to_string(), write_error: io::ErrorKind::PermissionDenied }
-            ).0,
-            "add command failed: cannot write to journal file '~/path': permission denied".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "add command failed:\ncannot write to journal file '~/path': permission denied".to_string()
+            )
         );
 
         assert_eq!(
             CliError::from(
                 AddCommandError::CannotWriteToFile { file_path: "~/path".to_string(), write_error: io::ErrorKind::Unsupported }
-            ).0,
-            "add command failed: cannot write to journal file '~/path': unknown error".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "add command failed:\ncannot write to journal file '~/path': unknown error".to_string()
+            )
         );
     }
 
@@ -204,24 +252,29 @@ mod tests {
         assert_eq!(
             CliError::from(
                 MoodCommandError::CannotOpenFile { file_path: "~/path".to_string(), open_error: io::ErrorKind::NotFound }
-            ).0,
-            "mood command failed: cannot open journal file '~/path': file not found".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "mood command failed:\ncannot open journal file '~/path': file not found".to_string()
+            )
         );
 
         assert_eq!(
             CliError::from(
                 MoodCommandError::CannotOpenFile { file_path: "~/path".to_string(), open_error: io::ErrorKind::PermissionDenied }
-            ).0,
-            "mood command failed: cannot open journal file '~/path': permission denied".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "mood command failed:\ncannot open journal file '~/path': permission denied".to_string()
+            )
         );
 
         assert_eq!(
             CliError::from(
                 MoodCommandError::CannotReadLine { file_path: "~/path".to_string() }
-            ).0,
-            "mood command failed: cannot read journal file '~/path': unknown error".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "mood command failed:\ncannot read journal file '~/path': unknown error".to_string()
+            )
         );
-
 
         assert_eq!(
             CliError::from(
@@ -229,8 +282,10 @@ mod tests {
                     line: "11 | foo bar baz".to_string(),
                     daily_score_parse_error: DailyScoreParseError::InvalidDateTime("11".to_string()),
                 }
-            ).0,
-            "mood command failed: cannot parse daily score data '11 | foo bar baz': '11' is not a valid datetime".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "mood command failed:\ncannot parse daily score data '11 | foo bar baz': '11' is not a valid datetime".to_string()
+            )
         );
 
         assert_eq!(
@@ -239,8 +294,10 @@ mod tests {
                     line: "2020-02-01 09:10:11 +0000".to_string(),
                     daily_score_parse_error: DailyScoreParseError::MissingScore,
                 }
-            ).0,
-            "mood command failed: cannot parse daily score data '2020-02-01 09:10:11 +0000': missing score".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "mood command failed:\ncannot parse daily score data '2020-02-01 09:10:11 +0000': missing score".to_string()
+            )
         );
 
         assert_eq!(
@@ -249,8 +306,10 @@ mod tests {
                     line: "2020-02-01 09:10:11 +0000 | foo |".to_string(),
                     daily_score_parse_error: DailyScoreParseError::InvalidScore("foo |".to_string()),
                 }
-            ).0,
-            "mood command failed: cannot parse daily score data '2020-02-01 09:10:11 +0000 | foo |': 'foo |' is not a valid score".to_string()
+            ),
+            CliError::CommandExecutionError(
+                "mood command failed:\ncannot parse daily score data '2020-02-01 09:10:11 +0000 | foo |': 'foo |' is not a valid score".to_string()
+            )
         );
     }
 }
