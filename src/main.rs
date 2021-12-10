@@ -5,7 +5,7 @@ fn main() {
     let args = env::args();
 
     if let Err(message) = howdy::run(args) {
-        eprintln!("{}", message);
+        eprintln!("execution failed:\n{}", message);
         process::exit(1)
     }
 }

@@ -53,9 +53,9 @@ impl DailyScore {
 }
 
 #[cfg(test)]
-use chrono::prelude::TimeZone;
-
 mod tests {
+    use chrono::prelude::TimeZone;
+
     use super::*;
 
     #[test]
