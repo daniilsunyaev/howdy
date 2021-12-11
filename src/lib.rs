@@ -18,6 +18,7 @@ mod test_helpers;
 #[derive(Debug, PartialEq)]
 pub enum CliError {
     CommandNotProvided,
+    FilenameNotProvided,
     CommandNotRecognized(String),
     AddCommandArgsMissingDailyScore,
     AddCommandArgsInvalidDailyScore { score_string: String, parse_error: num::IntErrorKind },
@@ -28,6 +29,7 @@ impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match self {
             CliError::CommandNotProvided => format!("command is not provided"),
+            CliError::FilenameNotProvided => format!("'-f' option requires file path which is not provided"),
             CliError::CommandNotRecognized(command) => format!("command '{}' is not recognized", command),
             CliError::AddCommandArgsMissingDailyScore => "daily score is not provided for add command".to_string(),
             CliError::AddCommandArgsInvalidDailyScore { score_string, parse_error } => {
@@ -95,7 +97,11 @@ impl From<MoodCommandError> for CliError {
     }
 }
 
-fn parse_add_command_args<I>(mut args: I) -> Result<AddCommand, CliError>
+pub struct Config {
+    pub file_path: String,
+}
+
+fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliError>
     where
     I: Iterator<Item = String>,
 {
@@ -110,22 +116,31 @@ fn parse_add_command_args<I>(mut args: I) -> Result<AddCommand, CliError>
 
     let comment: String = args.collect::<Vec<String>>().join(" ");
 
-    return Ok(AddCommand { score, comment: Some(comment), datetime: None })
+    return Ok(AddCommand { score, comment: Some(comment), datetime: None, config })
 }
 
-
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
-    where
-        I: Iterator<Item = String>,
-    {
-    cli_args.next(); // skip exec filename
-    let command = cli_args.next().ok_or(CliError::CommandNotProvided)?;
+where
+    I: Iterator<Item = String>,
+{
+    // skip exec filename
+    cli_args.next();
 
-    match command.as_str() {
-        "add" => Ok(parse_add_command_args(cli_args)?.run()?),
-        "mood" => Ok((MoodCommand {}).run()?),
-        unrecognized_command => Err(CliError::CommandNotRecognized(unrecognized_command.to_string())),
+    let mut config = Config { file_path: JOURNAL_FILE_PATH.to_string() };
+
+    let mut argument = cli_args.next().ok_or(CliError::CommandNotProvided)?;
+    if argument.as_str() == "-f" {
+        config.file_path = cli_args.next().ok_or(CliError::FilenameNotProvided)?;
+        argument = cli_args.next().ok_or(CliError::CommandNotProvided)?
+    };
+
+    match argument.as_str() {
+        "add" => build_add_command(cli_args, config)?.run()?,
+        "mood" => (MoodCommand { config }).run()?,
+        unrecognized_command => return Err(CliError::CommandNotRecognized(unrecognized_command.to_string())),
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -143,6 +158,15 @@ mod tests {
 
         assert_eq!(result_err, CliError::CommandNotProvided);
         assert_eq!(format!("{}", result_err), "command is not provided".to_string());
+    }
+
+    #[test]
+    fn no_file_path_error() {
+        let args = build_cli_args("exec/path -f");
+        let result_err = run(args.into_iter()).err().unwrap();
+
+        assert_eq!(result_err, CliError::FilenameNotProvided);
+        assert_eq!(format!("{}", result_err), "'-f' option requires file path which is not provided");
     }
 
     #[test]
