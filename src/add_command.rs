@@ -4,11 +4,13 @@ use std::fs::OpenOptions;
 use std::io;
 
 use crate::daily_score::DailyScore;
+use crate::Config;
 
 pub struct AddCommand {
     pub score: i8,
     pub datetime: Option<DateTime<Utc>>,
     pub comment: Option<String>,
+    pub config: Config,
 }
 
 #[derive(Debug, PartialEq)]
@@ -19,7 +21,6 @@ pub enum AddCommandError {
 
 impl AddCommand {
     pub fn run(&self) -> Result<(), AddCommandError> {
-        let file_path = crate::JOURNAL_FILE_PATH.to_string();
         let daily_score = DailyScore {
             score: self.score,
             comment: self.comment.clone().unwrap_or("".to_string()),
@@ -30,11 +31,11 @@ impl AddCommand {
             .read(true)
             .append(true)
             .create(true)
-            .open(file_path.clone())
-            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: file_path.clone(), open_error: open_error.kind() })?;
+            .open(self.config.file_path.clone())
+            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: self.config.file_path.clone(), open_error: open_error.kind() })?;
 
         writeln!(file, "{}", daily_score.to_s())
-            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path, write_error: write_error.kind() })?;
+            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path: self.config.file_path.clone(), write_error: write_error.kind() })?;
 
         Ok(())
     }
