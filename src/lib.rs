@@ -3,7 +3,7 @@ use std::io;
 use std::num;
 
 use crate::add_command::{AddCommand, AddCommandError};
-use crate::mood_command::{MoodCommand, MoodCommandError};
+use crate::mood_command::{MoodCommand, MoodReportType, MoodCommandError};
 use crate::daily_score::DailyScoreParseError;
 
 const JOURNAL_FILE_PATH: &str = "./howdy.journal";
@@ -22,6 +22,7 @@ pub enum CliError {
     CommandNotRecognized(String),
     AddCommandArgsMissingDailyScore,
     AddCommandArgsInvalidDailyScore { score_string: String, parse_error: num::IntErrorKind },
+    MoodReportTypeInvalid(String),
     CommandExecutionError(String),
 }
 
@@ -41,6 +42,7 @@ impl fmt::Display for CliError {
                 };
                 format!("failed to parse daily score for add command: {}", submessage)
             },
+            CliError::MoodReportTypeInvalid(report_type) => format!("'{}' is not a valid mood report type", report_type),
             CliError::CommandExecutionError(message) => message.to_string(),
         };
         write!(f, "{}", message)
@@ -119,6 +121,22 @@ fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliEr
     return Ok(AddCommand { score, comment: Some(comment), datetime: None, config })
 }
 
+fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, CliError>
+    where
+    I: Iterator<Item = String>,
+{
+    let report_type_str = args.next();
+    let report_type = match report_type_str.as_deref() {
+        Some("m") | Some("monthly") => MoodReportType::Monthly,
+        Some("y") | Some("yearly") => MoodReportType::Yearly,
+        Some("mm") | Some("moving") => MoodReportType::MovingMonthly,
+        None => MoodReportType::Monthly,
+        Some(unrecognized_option) => return Err(CliError::MoodReportTypeInvalid(unrecognized_option.to_string())),
+    };
+
+    return Ok(MoodCommand { report_type, config })
+}
+
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
 where
     I: Iterator<Item = String>,
@@ -136,7 +154,7 @@ where
 
     match argument.as_str() {
         "add" => build_add_command(cli_args, config)?.run()?,
-        "mood" => (MoodCommand { config }).run()?,
+        "mood" => build_mood_command(cli_args, config)?.run()?,
         unrecognized_command => return Err(CliError::CommandNotRecognized(unrecognized_command.to_string())),
     }
 
@@ -269,6 +287,18 @@ mod tests {
                 "add command failed:\ncannot write to journal file '~/path': unknown error".to_string()
             )
         );
+    }
+
+    #[test]
+    fn wrong_mood_report_type_error() {
+        let args = build_cli_args("exec/path mood mmm");
+        let result_err = run(args.into_iter()).err().unwrap();
+
+        assert_eq!(result_err,
+            CliError::MoodReportTypeInvalid("mmm".to_string()));
+
+        assert_eq!(format!("{}", result_err),
+            "'mmm' is not a valid mood report type".to_string());
     }
 
     #[test]

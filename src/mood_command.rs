@@ -9,6 +9,13 @@ use crate::Config;
 
 pub struct MoodCommand {
     pub config: Config,
+    pub report_type: MoodReportType,
+}
+
+pub enum MoodReportType {
+    Monthly,
+    Yearly,
+    MovingMonthly,
 }
 
 #[derive(Debug, PartialEq)]
@@ -43,9 +50,11 @@ impl MoodCommand {
 
         let mood_report = MoodReport::from_daily_scores(records);
 
-        println!("30-days mood: {}", mood_report.thirty_days_mood());
-        println!("365-days mood: {}", mood_report.yearly_mood());
-        println!("30-days moving mood: {:?}", mood_report.thirty_days_moving_mood());
+        match self.report_type {
+            MoodReportType::Monthly => println!("30-days mood: {}", mood_report.thirty_days_mood()),
+            MoodReportType::Yearly => println!("365-days mood: {}", mood_report.yearly_mood()),
+            MoodReportType::MovingMonthly => println!("30-days moving mood: {:?}", mood_report.thirty_days_moving_mood()),
+        }
 
         Ok(())
     }
