@@ -1,10 +1,10 @@
 use std::fmt;
 use std::io;
 use std::num;
+use std::error::Error;
 
 use crate::add_command::{AddCommand, AddCommandError};
 use crate::mood_command::{MoodCommand, MoodReportType, MoodCommandError};
-use crate::daily_score::DailyScoreParseError;
 
 const JOURNAL_FILE_PATH: &str = "./howdy.journal";
 const JOURNAL_SEPARATOR: char = '|';
@@ -15,35 +15,39 @@ mod mood_command;
 mod mood_report;
 mod test_helpers;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum CliError {
     CommandNotProvided,
     FilenameNotProvided,
     CommandNotRecognized(String),
     AddCommandArgsMissingDailyScore,
-    AddCommandArgsInvalidDailyScore { score_string: String, parse_error: num::IntErrorKind },
+    AddCommandArgsInvalidDailyScore { score_string: String, parse_error: std::num::ParseIntError },
     MoodReportTypeInvalid(String),
-    CommandExecutionError(String),
+    CommandExecutionError(Box<dyn Error>),
+}
+
+impl std::error::Error for CliError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::CommandExecutionError(error) => Some(&**error), // TODO: is there more graceful way of handling this?
+            Self::AddCommandArgsInvalidDailyScore { score_string: _, parse_error } => Some(parse_error),
+            _ => None
+        }
+    }
 }
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match self {
-            CliError::CommandNotProvided => format!("command is not provided"),
-            CliError::FilenameNotProvided => format!("'-f' option requires file path which is not provided"),
-            CliError::CommandNotRecognized(command) => format!("command '{}' is not recognized", command),
-            CliError::AddCommandArgsMissingDailyScore => "daily score is not provided for add command".to_string(),
-            CliError::AddCommandArgsInvalidDailyScore { score_string, parse_error } => {
-                let submessage = match parse_error {
-                    num::IntErrorKind::InvalidDigit => format!("'{}' is not a valid integer", score_string),
-                    num::IntErrorKind::PosOverflow =>  format!("'{}' is too big", score_string),
-                    num::IntErrorKind::NegOverflow =>  format!("'{}' is too small", score_string),
-                    _ => "unknown error".to_string(),
-                };
-                format!("failed to parse daily score for add command: {}", submessage)
+            Self::CommandNotProvided => format!("command is not provided"),
+            Self::FilenameNotProvided => format!("'-f' option requires file path which is not provided"),
+            Self::CommandNotRecognized(command) => format!("command '{}' is not recognized", command),
+            Self::AddCommandArgsMissingDailyScore => "daily score is not provided for add command".to_string(),
+            Self::AddCommandArgsInvalidDailyScore { score_string, parse_error: _ } => {
+                format!("cannot parse daily score '{}' as int for add command", score_string)
             },
-            CliError::MoodReportTypeInvalid(report_type) => format!("'{}' is not a valid mood report type", report_type),
-            CliError::CommandExecutionError(message) => message.to_string(),
+            Self::MoodReportTypeInvalid(report_type) => format!("'{}' is not a valid mood report type", report_type),
+            Self::CommandExecutionError(_) => format!("failed to execute command"),
         };
         write!(f, "{}", message)
     }
@@ -51,54 +55,57 @@ impl fmt::Display for CliError {
 
 impl From<AddCommandError> for CliError {
     fn from(error: add_command::AddCommandError) -> Self {
-        let message = match error {
-            AddCommandError::CannotOpenFile { file_path, open_error } => {
-                let submessage = match open_error {
-                    io::ErrorKind::PermissionDenied => "permission denied".to_string(),
-                    _ => "unknown error".to_string(),
-                };
-                format!("cannot open or create journal file '{}': {}", file_path, submessage)
-            },
-            AddCommandError::CannotWriteToFile { file_path, write_error } => {
-                let submessage = match write_error {
-                    io::ErrorKind::PermissionDenied => "permission denied".to_string(),
-                    _ => "unknown error".to_string(),
-                };
-                format!("cannot write to journal file '{}': {}", file_path, submessage)
-            }
-        };
+        Self::CommandExecutionError(Box::new(error))
 
-        CliError::CommandExecutionError(format!("add command failed:\n{}", message))
+//        let message = match error {
+//            AddCommandError::CannotOpenFile { file_path, open_error } => {
+//                let submessage = match open_error {
+//                    io::ErrorKind::PermissionDenied => "permission denied".to_string(),
+//                    _ => "unknown error".to_string(),
+//                };
+//                format!("cannot open or create journal file '{}': {}", file_path, submessage)
+//            },
+//            AddCommandError::CannotWriteToFile { file_path, write_error } => {
+//                let submessage = match write_error {
+//                    io::ErrorKind::PermissionDenied => "permission denied".to_string(),
+//                    _ => "unknown error".to_string(),
+//                };
+//                format!("cannot write to journal file '{}': {}", file_path, submessage)
+//            }
+//        };
+//
+//        CliError::CommandExecutionError(format!("add command failed:\n{}", message))
     }
 }
-
+//
 impl From<MoodCommandError> for CliError {
     fn from(error: mood_command::MoodCommandError) -> Self {
-        let message = match error {
-            MoodCommandError::CannotOpenFile { file_path, open_error } => {
-                let submessage = match open_error {
-                    io::ErrorKind::NotFound => "file not found".to_string(),
-                    io::ErrorKind::PermissionDenied => "permission denied".to_string(),
-                    _ => "unknown error".to_string(),
-                };
-                format!("cannot open journal file '{}': {}", file_path, submessage)
-            },
-            MoodCommandError::CannotReadLine { file_path } => format!("cannot read journal file '{}': unknown error", file_path),
-            MoodCommandError::DailyScoreParseError { line, daily_score_parse_error } => {
-                let submessage = match daily_score_parse_error {
-                    DailyScoreParseError::MissingDateTime => "datetime is missing".to_string(),
-                    DailyScoreParseError::InvalidDateTime(date_string) => format!("'{}' is not a valid datetime", date_string),
-                    DailyScoreParseError::MissingScore => "missing score".to_string(),
-                    DailyScoreParseError::InvalidScore(score_string) => format!("'{}' is not a valid score", score_string),
-                };
-                format!("cannot parse daily score data '{}': {}", line, submessage)
-            }
-        };
-
-        CliError::CommandExecutionError(format!("mood command failed:\n{}", message))
+        Self::CommandExecutionError(Box::new(error))
+//        let message = match error {
+//            MoodCommandError::CannotOpenFile { file_path, open_error } => {
+//                let submessage = match open_error {
+//                    io::ErrorKind::NotFound => "file not found".to_string(),
+//                    io::ErrorKind::PermissionDenied => "permission denied".to_string(),
+//                    _ => "unknown error".to_string(),
+//                };
+//                format!("cannot open journal file '{}': {}", file_path, submessage)
+//            },
+//            MoodCommandError::CannotReadLine { file_path } => format!("cannot read journal file '{}': unknown error", file_path),
+//            MoodCommandError::DailyScoreParseError { line, daily_score_parse_error } => {
+//                let submessage = match daily_score_parse_error {
+//                    DailyScoreParseError::MissingDateTime => "datetime is missing".to_string(),
+//                    DailyScoreParseError::InvalidDateTime(date_string) => format!("'{}' is not a valid datetime", date_string),
+//                    DailyScoreParseError::MissingScore => "missing score".to_string(),
+//                    DailyScoreParseError::InvalidScore(score_string) => format!("'{}' is not a valid score", score_string),
+//                };
+//                format!("cannot parse daily score data '{}': {}", line, submessage)
+//            }
+//        };
+//
+//        CliError::CommandExecutionError(format!("mood command failed:\n{}", message))
     }
 }
-
+//
 pub struct Config {
     pub file_path: String,
 }
@@ -113,7 +120,7 @@ fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliEr
     let score = score_string.parse::<i8>()
         .map_err(|parse_error| CliError::AddCommandArgsInvalidDailyScore {
             score_string: score_string,
-            parse_error: parse_error.kind().clone(),
+            parse_error: parse_error,
         })?;
 
     let comment: String = args.collect::<Vec<String>>().join(" ");
