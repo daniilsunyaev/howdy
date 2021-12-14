@@ -1,4 +1,5 @@
 use chrono::prelude::{DateTime, Utc};
+use std::fmt;
 
 const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 
@@ -9,11 +10,25 @@ pub struct DailyScore {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum DailyScoreParseError {
+pub enum ParseError {
     MissingDateTime,
     InvalidDateTime(String),
     MissingScore,
     InvalidScore(String),
+}
+
+impl std::error::Error for ParseError {}
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let message = match self {
+            ParseError::MissingDateTime => "datetime is missing".to_string(),
+            ParseError::InvalidDateTime(date_string) => format!("'{}' is not a valid datetime", date_string),
+            ParseError::MissingScore => "missing score".to_string(),
+            ParseError::InvalidScore(score_string) => format!("'{}' is not a valid score", score_string),
+        };
+
+        write!(f, "{}", message)
+    }
 }
 
 impl DailyScore {
@@ -31,20 +46,20 @@ impl DailyScore {
         format!("{} {} {} {} {}", self.datetime.format(DATE_FORMAT), crate::JOURNAL_SEPARATOR, self.score, crate::JOURNAL_SEPARATOR, self.comment)
     }
 
-    pub fn parse(daily_score_string: &str) -> Result<Self, DailyScoreParseError> {
+    pub fn parse(daily_score_string: &str) -> Result<Self, ParseError> {
         let mut slice = daily_score_string.splitn(3, " | "); // TODO: use separator instead
 
         let datetime_str = slice.next()
-            .ok_or(DailyScoreParseError::MissingDateTime)?;
+            .ok_or(ParseError::MissingDateTime)?;
 
         let datetime = DateTime::parse_from_str(datetime_str, DATE_FORMAT)
-            .map_err(|_| DailyScoreParseError::InvalidDateTime(datetime_str.to_string()))?;
+            .map_err(|_| ParseError::InvalidDateTime(datetime_str.to_string()))?;
 
         let score_str = slice.next()
-            .ok_or(DailyScoreParseError::MissingScore)?;
+            .ok_or(ParseError::MissingScore)?;
 
         let score = score_str.parse::<i8>()
-            .map_err(|_| DailyScoreParseError::InvalidScore(score_str.to_string()))?;
+            .map_err(|_| ParseError::InvalidScore(score_str.to_string()))?;
 
         let comment = slice.next().unwrap_or("").to_string();
         let datetime: DateTime<Utc> = DateTime::from(datetime);
@@ -80,25 +95,25 @@ mod tests {
 
     #[test]
     fn invalid_string_parsing() {
-        assert_eq!(DailyScore::parse("").err().unwrap(), DailyScoreParseError::InvalidDateTime("".to_string()));
+        assert_eq!(DailyScore::parse("").err().unwrap(), ParseError::InvalidDateTime("".to_string()));
         assert_eq!(DailyScore::parse("fooo").err().unwrap(),
-            DailyScoreParseError::InvalidDateTime("fooo".to_string()));
+            ParseError::InvalidDateTime("fooo".to_string()));
 
         assert_eq!(DailyScore::parse("foo|").err().unwrap(),
-            DailyScoreParseError::InvalidDateTime("foo|".to_string()));
+            ParseError::InvalidDateTime("foo|".to_string()));
 
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000|").err().unwrap(),
-            DailyScoreParseError::InvalidDateTime("2020-02-01 09:10:11 +0000|".to_string()));
+            ParseError::InvalidDateTime("2020-02-01 09:10:11 +0000|".to_string()));
 
-        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000").err().unwrap(), DailyScoreParseError::MissingScore);
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000").err().unwrap(), ParseError::MissingScore);
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | ").err().unwrap(),
-            DailyScoreParseError::InvalidScore("".to_string()));
+            ParseError::InvalidScore("".to_string()));
 
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | foo").err().unwrap(),
-            DailyScoreParseError::InvalidScore("foo".to_string()));
+            ParseError::InvalidScore("foo".to_string()));
 
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | 4|").err().unwrap(),
-            DailyScoreParseError::InvalidScore("4|".to_string()));
+            ParseError::InvalidScore("4|".to_string()));
     }
 
     #[test]
@@ -115,5 +130,13 @@ mod tests {
 
         assert_eq!(daily_score.score, 5);
         assert_eq!(daily_score.comment, "");
+    }
+
+    #[test]
+    fn errors_display() {
+        assert_eq!(ParseError::MissingDateTime.to_string(), "datetime is missing");
+        assert_eq!(ParseError::InvalidDateTime("foo bar".to_string()).to_string(), "'foo bar' is not a valid datetime");
+        assert_eq!(ParseError::MissingScore.to_string(), "missing score");
+        assert_eq!(ParseError::InvalidScore("foo".to_string()).to_string(), "'foo' is not a valid score");
     }
 }
