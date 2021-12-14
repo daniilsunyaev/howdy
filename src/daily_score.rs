@@ -131,4 +131,12 @@ mod tests {
         assert_eq!(daily_score.score, 5);
         assert_eq!(daily_score.comment, "");
     }
+
+    #[test]
+    fn errors_display() {
+        assert_eq!(ParseError::MissingDateTime.to_string(), "datetime is missing");
+        assert_eq!(ParseError::InvalidDateTime("foo bar".to_string()).to_string(), "'foo bar' is not a valid datetime");
+        assert_eq!(ParseError::MissingScore.to_string(), "missing score");
+        assert_eq!(ParseError::InvalidScore("foo".to_string()).to_string(), "'foo' is not a valid score");
+    }
 }

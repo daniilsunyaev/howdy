@@ -60,3 +60,20 @@ impl AddCommand {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn errors_display() {
+        let file_path = String::from("path/to/file");
+        let io_error = io::Error::new(io::ErrorKind::Other, "error text");
+        let another_io_error = io::Error::new(io::ErrorKind::Other, "error text");
+
+        assert_eq!(AddCommandError::CannotOpenFile { file_path: file_path.clone(), open_error: io_error }.to_string(),
+            "cannot open journal file 'path/to/file'");
+        assert_eq!(AddCommandError::CannotWriteToFile { file_path, write_error: another_io_error }.to_string(),
+            "cannot write to journal file 'path/to/file'");
+    }
+}

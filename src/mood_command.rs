@@ -19,7 +19,7 @@ pub enum MoodReportType {
     MovingMonthly,
 }
 
-#[derive(Debug)]//, PartialEq)]
+#[derive(Debug)]
 pub enum MoodCommandError {
     CannotOpenFile { file_path: String, open_error: io::Error },
     CannotReadLine { file_path: String, read_error: io::Error },
@@ -40,19 +40,9 @@ impl fmt::Display for MoodCommandError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::CannotOpenFile { file_path, open_error: _ } => write!(f, "{} '{}'", "cannot open journal file", file_path),
-            Self::CannotReadLine { file_path, read_error: _ } => write!(f, "{} '{}'", "cannot read journal file line", file_path),
+            Self::CannotReadLine { file_path, read_error: _ } => write!(f, "{} '{}'", "cannot read line from journal file", file_path),
             Self::DailyScoreParseError { line, daily_score_parse_error: _ } => write!(f, "{} '{}'", "cannot parse daily score data", line),
         }
-
-        //    MoodCommandError::CannotOpenFile { file_path, open_error } => {
-        //        let submessage = match open_error {
-        //            io::ErrorKind::NotFound => "file not found".to_string(),
-        //            io::ErrorKind::PermissionDenied => "permission denied".to_string(),
-        //            _ => "unknown error".to_string(),
-        //        };
-        //        format!("cannot open journal file '{}': {}", file_path, submessage)
-        //    },
-        //    MoodCommandError::CannotReadLine { file_path } => format!("cannot read journal file '{}': unknown error", file_path),
     }
 }
 
@@ -95,5 +85,26 @@ impl MoodCommand {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn errors_display() {
+        let file_path = String::from("path/to/file");
+        let io_error = io::Error::new(io::ErrorKind::Other, "error text");
+        let another_io_error = io::Error::new(io::ErrorKind::Other, "error text");
+        let line = String::from("foo bar baz");
+        let daily_score_parse_error = daily_score::ParseError::MissingDateTime;
+
+        assert_eq!(MoodCommandError::CannotOpenFile { file_path: file_path.clone(), open_error: io_error }.to_string(),
+            "cannot open journal file 'path/to/file'");
+        assert_eq!(MoodCommandError::CannotReadLine { file_path, read_error: another_io_error }.to_string(),
+            "cannot read line from journal file 'path/to/file'");
+        assert_eq!(MoodCommandError::DailyScoreParseError { line, daily_score_parse_error }.to_string(),
+            "cannot parse daily score data 'foo bar baz'");
     }
 }
