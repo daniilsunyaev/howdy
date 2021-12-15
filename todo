@@ -11,7 +11,7 @@
 11. ✗ extract daily score creation methods to factory or builder object
 12. ✓ allow to specify mood report type
 13. ✓ make sure lib errors implement std::error::Error
-14. add couple of integrational tests
+14. ✓ add couple of integrational tests
 15. ✓ get rid of passing iterator to lib objects; use slices or structs
 16. think of moving CliError to separate file
 17. add and use some rust extended linter (probably clippy)
