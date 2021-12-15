@@ -56,6 +56,7 @@ impl fmt::Display for CliError {
 impl From<AddCommandError> for CliError {
     fn from(error: add_command::AddCommandError) -> Self {
         Self::CommandExecutionError(Box::new(error))
+    }
 }
 
 impl From<MoodCommandError> for CliError {
