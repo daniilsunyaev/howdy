@@ -29,19 +29,24 @@ impl MoodReport {
     }
 
     pub fn thirty_days_mood(&self) -> i32 {
-        let thirty_days_ago = Local::now() - Duration::days(30);
+        let now = Local::now();
+        let thirty_days_ago = (now - Duration::days(29)).with_timezone(now.offset());
 
-        self.filter_mood_sum(|daily_score| daily_score.datetime >= thirty_days_ago)
+        self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= thirty_days_ago.date())
     }
 
     pub fn yearly_mood(&self) -> i32 {
-        let usual_year_ago = Local::now() - Duration::days(365);
+        let now = Local::now();
+        let usual_year_ago = (now - Duration::days(364)).with_timezone(now.offset());
 
-        self.filter_mood_sum(|daily_score| daily_score.datetime >= usual_year_ago)
+        self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= usual_year_ago.date())
     }
 
     pub fn thirty_days_moving_mood(&self) -> Vec<i32> {
-        self.timeframed_moving_mood_report(30, 0, 30)
+        // from 29 days ago to now there are 30 calendar dates
+        // also we use dates to verify if daily score records fit into frame
+        // so 29-days frame covers 30 dates
+        self.timeframed_moving_mood_report(29, 0, 29)
     }
 
     fn filter_mood_sum<F>(&self, filter_fn: F) -> i32
@@ -58,12 +63,15 @@ impl MoodReport {
     fn timeframed_moving_mood_report(&self, starts_at_days_ago: u32, ends_at_days_ago: u32, frame_size: u32) -> Vec<i32> {
         let mut hist = Vec::new();
         hist.reserve((starts_at_days_ago - ends_at_days_ago) as usize);
+        let now = Local::now();
+        let fixed_now = now.with_timezone(now.offset());
 
-        for frame_starts_at_days_ago in ((ends_at_days_ago + frame_size)..(starts_at_days_ago + frame_size)).rev() {
+        for frame_ends_at_days_ago in (ends_at_days_ago..=starts_at_days_ago).rev() {
+            let frame_end = fixed_now - Duration::days(frame_ends_at_days_ago as i64);
+            let frame_start = frame_end - Duration::days(frame_size as i64);
             let sum = self
                 .filter_mood_sum(|daily_score| {
-                    daily_score.datetime >= Local::now() - Duration::days(frame_starts_at_days_ago as i64) &&
-                        daily_score.datetime <= Local::now() - Duration::days(frame_starts_at_days_ago as i64) + Duration::days(frame_size as i64)
+                    daily_score.datetime.date() >= frame_start.date() && daily_score.datetime.date() <= frame_end.date()
                 });
             hist.push(sum);
         }
@@ -136,7 +144,7 @@ mod tests {
 
         assert_eq!(mood_report.thirty_days_moving_mood(),
             vec![
-                2, 2, 2, 2, 1, 1, 1, 1, 1, 1,
+                2, 2, 2, 2, 1, 1, 1, 1, 1, -1,
                 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
                 -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,
             ]
