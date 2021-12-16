@@ -10,7 +10,7 @@ use crate::Config;
 
 pub struct AddCommand {
     pub score: i8,
-    pub datetime: Option<DateTime<Utc>>,
+    pub datetime: Option<DateTime<Local>>,
     pub comment: Option<String>,
     pub config: Config,
 }
@@ -44,7 +44,7 @@ impl AddCommand {
         let daily_score = DailyScore {
             score: self.score,
             comment: self.comment.clone().unwrap_or_else(String::new),
-            datetime: self.datetime.unwrap_or_else(Utc::now),
+            datetime: self.datetime.unwrap_or_else(Local::now),
         };
 
         let mut file = OpenOptions::new()
