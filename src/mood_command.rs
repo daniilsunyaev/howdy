@@ -39,9 +39,9 @@ impl std::error::Error for MoodCommandError {
 impl fmt::Display for MoodCommandError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::CannotOpenFile { file_path, open_error: _ } => write!(f, "{} '{}'", "cannot open journal file", file_path),
-            Self::CannotReadLine { file_path, read_error: _ } => write!(f, "{} '{}'", "cannot read line from journal file", file_path),
-            Self::DailyScoreParseError { line, daily_score_parse_error: _ } => write!(f, "{} '{}'", "cannot parse daily score data", line),
+            Self::CannotOpenFile { file_path, open_error: _ } => write!(f, "cannot open journal file '{}'", file_path),
+            Self::CannotReadLine { file_path, read_error: _ } => write!(f, "cannot read line from journal file '{}'", file_path),
+            Self::DailyScoreParseError { line, daily_score_parse_error: _ } => write!(f, "cannot parse daily score data '{}'", line),
         }
     }
 }

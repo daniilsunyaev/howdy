@@ -39,15 +39,15 @@ impl std::error::Error for CliError {
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let message = match self {
-            Self::CommandNotProvided => format!("command is not provided"),
-            Self::FilenameNotProvided => format!("'-f' option requires file path which is not provided"),
+            Self::CommandNotProvided => "command is not provided".to_string(),
+            Self::FilenameNotProvided => "'-f' option requires file path which is not provided".to_string(),
             Self::CommandNotRecognized(command) => format!("command '{}' is not recognized", command),
             Self::AddCommandArgsMissingDailyScore => "daily score is not provided for add command".to_string(),
             Self::AddCommandArgsInvalidDailyScore { score_string, parse_error: _ } => {
                 format!("cannot parse daily score '{}' as int for add command", score_string)
             },
             Self::MoodReportTypeInvalid(report_type) => format!("'{}' is not a valid mood report type", report_type),
-            Self::CommandExecutionError(_) => format!("failed to execute command"),
+            Self::CommandExecutionError(_) => "failed to execute command".to_string(),
         };
         write!(f, "{}", message)
     }
@@ -77,14 +77,11 @@ fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliEr
         .ok_or(CliError::AddCommandArgsMissingDailyScore)?;
 
     let score = score_string.parse::<i8>()
-        .map_err(|parse_error| CliError::AddCommandArgsInvalidDailyScore {
-            score_string: score_string,
-            parse_error: parse_error,
-        })?;
+        .map_err(|parse_error| CliError::AddCommandArgsInvalidDailyScore { score_string, parse_error })?;
 
     let comment: String = args.collect::<Vec<String>>().join(" ");
 
-    return Ok(AddCommand { score, comment: Some(comment), datetime: None, config })
+    Ok(AddCommand { score, comment: Some(comment), datetime: None, config })
 }
 
 fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, CliError>
@@ -100,7 +97,7 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
         Some(unrecognized_option) => return Err(CliError::MoodReportTypeInvalid(unrecognized_option.to_string())),
     };
 
-    return Ok(MoodCommand { report_type, config })
+    Ok(MoodCommand { report_type, config })
 }
 
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
