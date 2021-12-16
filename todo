@@ -15,8 +15,8 @@
 15. ✓ get rid of passing iterator to lib objects; use slices or structs
 16. ✗ think of moving CliError to separate file
 17. ✓ add and use some rust extended linter (probably clippy)
-19. use dates in timezone for mood report purposes instead of x days ago from current time
-19. add readme
-20. add optional tags
-21. add export to gnu plot
-22. add export to xcel or open office calc format
+19. ✓ use dates in timezone for mood report purposes instead of x days ago from current time
+20. add readme
+21. add optional tags
+22. add export to gnu plot
+23. add export to xcel or open office calc format
