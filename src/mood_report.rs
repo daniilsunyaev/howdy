@@ -17,11 +17,13 @@ impl MoodReport {
         Self { daily_scores }
     }
 
+    #[cfg(test)]
     pub fn add_score(&mut self, daily_score: DailyScore) -> &Self {
         self.daily_scores.push(daily_score);
         self
     }
 
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.daily_scores.len()
     }
