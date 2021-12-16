@@ -41,10 +41,11 @@ impl fmt::Display for AddCommandError {
 
 impl AddCommand {
     pub fn run(&self) -> Result<(), AddCommandError> {
+        let local_datetime = self.datetime.unwrap_or_else(Local::now);
         let daily_score = DailyScore {
             score: self.score,
             comment: self.comment.clone().unwrap_or_else(String::new),
-            datetime: self.datetime.unwrap_or_else(Local::now),
+            datetime: local_datetime.with_timezone(local_datetime.offset())
         };
 
         let mut file = OpenOptions::new()

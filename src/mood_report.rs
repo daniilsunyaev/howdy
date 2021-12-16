@@ -75,6 +75,7 @@ impl MoodReport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{Utc, FixedOffset, DateTime};
 
     #[test]
     fn builds_default() {
@@ -106,7 +107,7 @@ mod tests {
         let daily_score = DailyScore::with_score(1);
         let another_daily_score = DailyScore::with_score(2);
         let old_daily_score =
-            DailyScore { score: 5, comment: "".to_string(), datetime: Local::now() - Duration::days(40) };
+            DailyScore { score: 5, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(40) };
 
         let mood_report =
             MoodReport::from_daily_scores(vec![daily_score, another_daily_score, old_daily_score]);
@@ -118,11 +119,11 @@ mod tests {
     fn thirty_days_moving_mood() {
         let today_daily_score = DailyScore::with_score(1);
         let beginning_of_month_daily_score =
-            DailyScore { score: -1, comment: "".to_string(), datetime: Local::now() - Duration::days(25) - Duration::minutes(1) };
+            DailyScore { score: -1, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(25) - Duration::minutes(1) };
         let fifty_days_ago_daily_score =
-            DailyScore { score: 2, comment: "".to_string(), datetime: Local::now() - Duration::days(50) + Duration::minutes(1) };
+            DailyScore { score: 2, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(50) + Duration::minutes(1) };
         let ninty_days_ago_daily_score =
-            DailyScore { score: 20, comment: "".to_string(), datetime: Local::now() - Duration::days(90) };
+            DailyScore { score: 20, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(90) };
 
         let mood_report = MoodReport::from_daily_scores(
             vec![
@@ -147,15 +148,19 @@ mod tests {
         let daily_score = DailyScore::with_score(1);
         let another_daily_score = DailyScore::with_score(2);
         let forty_days_ago_score =
-            DailyScore { score: 5, comment: "".to_string(), datetime: Local::now() - Duration::days(40) };
+            DailyScore { score: 5, comment: "".to_string(), datetime: now_with_fixed_offset()  - Duration::days(40) };
 
         let old_score =
-            DailyScore { score: -4, datetime: Local::now() - Duration::weeks(55), comment: "".to_string() };
+            DailyScore { score: -4, datetime: now_with_fixed_offset() - Duration::weeks(55), comment: "".to_string() };
 
         let mood_report = MoodReport::from_daily_scores(
             vec![daily_score, another_daily_score, forty_days_ago_score, old_score]
         );
 
         assert_eq!(mood_report.yearly_mood(), 8);
+    }
+
+    fn now_with_fixed_offset() -> DateTime<FixedOffset> {
+        Utc::now().with_timezone(&FixedOffset::east(0))
     }
 }

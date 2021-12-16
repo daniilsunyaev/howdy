@@ -1,12 +1,15 @@
-use chrono::prelude::{DateTime, Local};
+use chrono::prelude::{DateTime, FixedOffset};
 use std::fmt;
+
+#[cfg(test)]
+use chrono::prelude::Utc;
 
 const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 
 pub struct DailyScore {
     pub score: i8,
     pub comment: String,
-    pub datetime: DateTime<Local>,
+    pub datetime: DateTime<FixedOffset>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -34,7 +37,7 @@ impl fmt::Display for ParseError {
 impl DailyScore {
     #[cfg(test)]
     pub fn new() -> Self {
-        Self { score: 0, comment: "".to_string(), datetime: Local::now() }
+        Self { score: 0, comment: "".to_string(), datetime: Utc::now().into() }
     }
 
     #[cfg(test)]
@@ -62,23 +65,22 @@ impl DailyScore {
             .map_err(|_| ParseError::InvalidScore(score_str.to_string()))?;
 
         let comment = slice.next().unwrap_or("").to_string();
-        let datetime: DateTime<Local> = DateTime::from(datetime);
         Ok(DailyScore { score, comment, datetime })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::prelude::{TimeZone, Utc, FixedOffset};
+    use chrono::prelude::TimeZone;
 
     use super::*;
 
     #[test]
     fn string_formatting() {
-        let local_date = FixedOffset::east(3 * 3600).ymd(2020, 1, 1).and_hms(9, 10, 11);
+        let local_date = FixedOffset::east(4 * 3600).ymd(2020, 1, 1).and_hms(9, 10, 11);
         let score = DailyScore { score: 1, comment: "foo || bar".to_string(), datetime: local_date.into() };
 
-        assert_eq!(score.to_s(), "2020-01-01 09:10:11 +0300 | 1 | foo || bar")
+        assert_eq!(score.to_s(), "2020-01-01 09:10:11 +0400 | 1 | foo || bar")
     }
 
     #[test]
