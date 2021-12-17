@@ -16,7 +16,7 @@
 16. ✗ think of moving CliError to separate file
 17. ✓ add and use some rust extended linter (probably clippy)
 18. ✓ use dates in timezone for mood report purposes instead of x days ago from current time
-19. add readme
+19. ✓ add readme
 20. add optional tags
 21. add export to gnu plot
 22. add export to xcel or open office calc format

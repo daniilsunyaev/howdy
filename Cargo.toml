@@ -1,6 +1,6 @@
 [package]
 name = "howdy"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Daniil Sunyaev <dasforrum@gmail.com>"]
 edition = "2018"
 
