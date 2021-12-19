@@ -8,6 +8,7 @@ use crate::mood_command::{MoodCommand, MoodReportType, MoodCommandError};
 
 const JOURNAL_FILE_PATH: &str = "./howdy.journal";
 const JOURNAL_SEPARATOR: char = '|';
+const TAGS_SEPARATOR: &str = ",";
 
 mod daily_score;
 mod add_command;

@@ -44,6 +44,7 @@ impl AddCommand {
         let local_datetime = self.datetime.unwrap_or_else(Local::now);
         let daily_score = DailyScore {
             score: self.score,
+            tags: Vec::new(),
             comment: self.comment.clone().unwrap_or_else(String::new),
             datetime: local_datetime.with_timezone(local_datetime.offset())
         };

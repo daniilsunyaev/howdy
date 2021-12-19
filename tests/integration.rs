@@ -13,7 +13,7 @@ fn add_record_to_journal() {
         .args(&["add", "3", "comment"]);
     cmd.assert().success();
 
-    journal.assert(predicate::str::contains("| 3 | comment"));
+    journal.assert(predicate::str::contains("| 3 |  | comment"));
 }
 
 #[test]
