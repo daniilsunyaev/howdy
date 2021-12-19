@@ -1,5 +1,6 @@
 use chrono::prelude::{DateTime, FixedOffset};
 use std::fmt;
+use std::collections::HashSet;
 
 #[cfg(test)]
 use chrono::prelude::Utc;
@@ -8,7 +9,7 @@ const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 
 pub struct DailyScore {
     pub score: i8,
-    pub tags: Vec<String>,
+    pub tags: HashSet<String>,
     pub comment: String,
     pub datetime: DateTime<FixedOffset>,
 }
@@ -38,7 +39,7 @@ impl fmt::Display for ParseError {
 impl DailyScore {
     #[cfg(test)]
     pub fn new() -> Self {
-        Self { score: 0, comment: "".to_string(), tags: Vec::new(), datetime: Utc::now().into() }
+        Self { score: 0, comment: "".to_string(), tags: HashSet::new(), datetime: Utc::now().into() }
     }
 
     #[cfg(test)]
@@ -50,7 +51,7 @@ impl DailyScore {
         format!("{} {} {} {} {} {} {}",
                 self.datetime.format(DATE_FORMAT), crate::JOURNAL_SEPARATOR,
                 self.score, crate::JOURNAL_SEPARATOR,
-                self.tags.join(crate::TAGS_SEPARATOR), crate::JOURNAL_SEPARATOR,
+                self.tags_string(), crate::JOURNAL_SEPARATOR,
                 self.comment)
     }
 
@@ -70,16 +71,22 @@ impl DailyScore {
         let score = score_str.parse::<i8>()
             .map_err(|_| ParseError::InvalidScore(score_str.to_string()))?;
 
-        let tags: Vec<String>;
+        let tags: HashSet<String>;
         let tags_str = slice.next().unwrap_or("");
-        if tags_str.len() > 0 {
+        if !tags_str.is_empty() {
             tags = tags_str.split(',').map(str::to_string).collect();
         } else {
-            tags = vec![];
+            tags = HashSet::new();
         }
 
         let comment = slice.next().unwrap_or("").to_string();
         Ok(DailyScore { score, tags, comment, datetime })
+    }
+
+    fn tags_string(&self) -> String {
+       let mut tags_vec = self.tags.iter().map(String::as_str).collect::<Vec<&str>>();
+       tags_vec.sort_unstable();
+       tags_vec.join(crate::TAGS_SEPARATOR)
     }
 }
 
@@ -95,11 +102,11 @@ mod tests {
         let score = DailyScore {
             score: 1,
             comment: "foo || bar".to_string(),
-            tags: vec!["run".to_string(), "games".to_string()],
+            tags: vec!["run".to_string(), "games".to_string()].into_iter().collect(),
             datetime: local_date.into()
         };
 
-        assert_eq!(score.to_s(), "2020-01-01 09:10:11 +0400 | 1 | run,games | foo || bar")
+        assert_eq!(score.to_s(), "2020-01-01 09:10:11 +0400 | 1 | games,run | foo || bar")
     }
 
     #[test]
@@ -112,7 +119,7 @@ mod tests {
         let daily_score = daily_score_parse_result.unwrap();
         assert_eq!(daily_score.score, 1);
         assert_eq!(daily_score.comment, "foo || bar");
-        assert_eq!(daily_score.tags, Vec::<String>::new());
+        assert_eq!(daily_score.tags, HashSet::new());
         assert_eq!(Utc.ymd(2020, 2, 1).and_hms(7, 10, 11), daily_score.datetime);
     }
 
@@ -144,7 +151,7 @@ mod tests {
         let daily_score = DailyScore::new();
 
         assert_eq!(daily_score.score, 0);
-        assert_eq!(daily_score.tags, Vec::<String>::new());
+        assert_eq!(daily_score.tags, HashSet::new());
         assert_eq!(daily_score.comment, "");
     }
 
@@ -153,7 +160,7 @@ mod tests {
         let daily_score = DailyScore::with_score(5);
 
         assert_eq!(daily_score.score, 5);
-        assert_eq!(daily_score.tags, Vec::<String>::new());
+        assert_eq!(daily_score.tags, HashSet::new());
         assert_eq!(daily_score.comment, "");
     }
 

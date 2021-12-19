@@ -4,6 +4,7 @@ use std::fs::OpenOptions;
 use std::io;
 use std::fmt;
 use std::error::Error;
+use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
 use crate::Config;
@@ -44,7 +45,7 @@ impl AddCommand {
         let local_datetime = self.datetime.unwrap_or_else(Local::now);
         let daily_score = DailyScore {
             score: self.score,
-            tags: Vec::new(),
+            tags: HashSet::new(),
             comment: self.comment.clone().unwrap_or_else(String::new),
             datetime: local_datetime.with_timezone(local_datetime.offset())
         };

@@ -1,20 +1,23 @@
 use chrono::Local;
 use chrono::Duration;
+use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
 
 pub struct MoodReport {
     daily_scores: Vec<DailyScore>,
+    tags: HashSet<String>,
 }
 
 impl MoodReport {
     #[cfg(test)]
     pub fn new() -> Self {
-        Self { daily_scores: vec![] }
+        Self { daily_scores: vec![], tags: HashSet::new() }
     }
 
+    // TODO: do we need this method?
     pub fn from_daily_scores(daily_scores: Vec<DailyScore>) -> Self {
-        Self { daily_scores }
+        Self { daily_scores, tags: HashSet::new() }
     }
 
     #[cfg(test)]
@@ -56,6 +59,7 @@ impl MoodReport {
             self.daily_scores
                 .iter()
                 .filter(filter_fn)
+                .filter(|daily_score| self.tags.iter().all(|tag| daily_score.tags.contains(tag)))
                 .map(|daily_score| daily_score.score as i32)
                 .sum()
         }
@@ -117,7 +121,7 @@ mod tests {
         let old_daily_score =
             DailyScore {
                 score: 5,
-                tags: Vec::new(),
+                tags: HashSet::new(),
                 comment: "".to_string(),
                 datetime: now_with_fixed_offset() - Duration::days(40)
             };
@@ -134,21 +138,21 @@ mod tests {
         let beginning_of_month_daily_score =
             DailyScore {
                 score: -1,
-                tags: Vec::new(),
+                tags: HashSet::new(),
                 comment: "".to_string(),
                 datetime: now_with_fixed_offset() - Duration::days(25) - Duration::minutes(1)
             };
         let fifty_days_ago_daily_score =
             DailyScore {
                 score: 2,
-                tags: Vec::new(),
+                tags: HashSet::new(),
                 comment: "".to_string(),
                 datetime: now_with_fixed_offset() - Duration::days(50) + Duration::minutes(1)
             };
         let ninty_days_ago_daily_score =
             DailyScore {
                 score: 20,
-                tags: Vec::new(),
+                tags: HashSet::new(),
                 comment: "".to_string(),
                 datetime: now_with_fixed_offset() - Duration::days(90)
             };
@@ -179,7 +183,7 @@ mod tests {
             DailyScore {
                 score: 5,
                 datetime: now_with_fixed_offset()  - Duration::days(40),
-                tags: Vec::new(),
+                tags: HashSet::new(),
                 comment: "".to_string(),
             };
 
@@ -187,8 +191,8 @@ mod tests {
             DailyScore {
                 score: -4,
                 datetime: now_with_fixed_offset() - Duration::weeks(55),
-                tags: vec!["tag".to_string()],
-                comment: "".to_string()
+                tags: vec!["tag".to_string()].into_iter().collect(),
+                comment: "".to_string(),
             };
 
         let mood_report = MoodReport::from_daily_scores(
