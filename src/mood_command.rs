@@ -2,6 +2,7 @@ use std::{io, fmt};
 use std::io::{BufRead, BufReader};
 use std::fs::OpenOptions;
 use std::error::Error;
+use std::collections::HashSet;
 
 use crate::daily_score;
 use crate::daily_score::DailyScore;
@@ -11,6 +12,7 @@ use crate::Config;
 pub struct MoodCommand {
     pub config: Config,
     pub report_type: MoodReportType,
+    pub tags: HashSet<String>,
 }
 
 pub enum MoodReportType {
@@ -76,7 +78,7 @@ impl MoodCommand {
             records.push(daily_score);
         }
 
-        let mood_report = MoodReport::from_daily_scores(records);
+        let mood_report = MoodReport { daily_scores: &records, tags: &self.tags };
 
         match self.report_type {
             MoodReportType::Monthly => println!("30-days mood: {}", mood_report.thirty_days_mood()),

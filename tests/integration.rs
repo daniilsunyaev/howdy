@@ -21,9 +21,9 @@ fn check_mood() {
     let journal = prepare_empty_journal_file();
 
     let date_format = "%Y-%m-%d %H:%M:%S %z";
-    let line_old = format!("{} | {} | \n", (Utc::now() - Duration::days(40)).format(date_format), 4);
-    let line_recent = format!("{} | {} | \n", Utc::now().format(date_format), 2);
-    let line_new = format!("{} | {} | foo", Utc::now().format(date_format), 1);
+    let line_old = format!("{} | {} | tag |\n", (Utc::now() - Duration::days(40)).format(date_format), 4);
+    let line_recent = format!("{} | {} | tag2 |\n", Utc::now().format(date_format), 2);
+    let line_new = format!("{} | {} | tag | foo", Utc::now().format(date_format), 1);
 
     journal
         .write_str(
@@ -34,9 +34,16 @@ fn check_mood() {
     let mut cmd = Command::cargo_bin("howdy").unwrap();
     cmd.arg("-f")
         .arg(journal.path())
-        .args(&["mood", "m"])
+        .args(&["mood", "-t", "m"])
         .assert()
         .stdout("30-days mood: 3\n");
+
+    let mut tagged_cmd = Command::cargo_bin("howdy").unwrap();
+    tagged_cmd.arg("-f")
+        .arg(journal.path())
+        .args(&["mood", "tag", "-t", "m"])
+        .assert()
+        .stdout("30-days mood: 1\n");
 }
 
 fn prepare_empty_journal_file() -> assert_fs::NamedTempFile {

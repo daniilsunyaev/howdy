@@ -2,6 +2,7 @@ use std::fmt;
 use std::num;
 use std::error::Error;
 use std::ops::Deref;
+use std::collections::HashSet;
 
 use crate::add_command::{AddCommand, AddCommandError};
 use crate::mood_command::{MoodCommand, MoodReportType, MoodCommandError};
@@ -89,6 +90,16 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
     where
     I: Iterator<Item = String>,
 {
+    let mut tag_or_type_sign;
+    let mut tags = HashSet::new();
+    loop {
+        tag_or_type_sign = args.next();
+        match tag_or_type_sign.as_deref() {
+            Some("-type") | Some("-t") | None => break,
+            Some(tag) => tags.insert(tag.to_string())
+        };
+    };
+
     let report_type_str = args.next();
     let report_type = match report_type_str.as_deref() {
         Some("m") | Some("monthly") => MoodReportType::Monthly,
@@ -98,7 +109,7 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
         Some(unrecognized_option) => return Err(CliError::MoodReportTypeInvalid(unrecognized_option.to_string())),
     };
 
-    Ok(MoodCommand { report_type, config })
+    Ok(MoodCommand { report_type, config, tags })
 }
 
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
@@ -189,7 +200,7 @@ mod tests {
 
     #[test]
     fn wrong_mood_report_type_error() {
-        let args = build_cli_args("exec/path mood mmm");
+        let args = build_cli_args("exec/path mood -t mmm");
         let result_err = run(args.into_iter()).err().unwrap();
 
         assert!(
