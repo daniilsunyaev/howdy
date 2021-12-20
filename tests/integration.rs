@@ -10,10 +10,10 @@ fn add_record_to_journal() {
     let mut cmd = Command::cargo_bin("howdy").unwrap();
     cmd.arg("-f")
         .arg(journal.path())
-        .args(&["add", "3", "comment"]);
+        .args(&["add", "3", "tag", "another tag", "-c", "comment"]);
     cmd.assert().success();
 
-    journal.assert(predicate::str::contains("| 3 |  | comment"));
+    journal.assert(predicate::str::contains("| 3 | another tag,tag | comment"));
 }
 
 #[test]

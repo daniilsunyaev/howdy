@@ -49,7 +49,7 @@ impl fmt::Display for MoodCommandError {
 }
 
 impl MoodCommand {
-    pub fn run(&self) -> Result<(), MoodCommandError> {
+    pub fn run(self) -> Result<(), MoodCommandError> {
         let mut records = Vec::<DailyScore>::new();
 
         let file = OpenOptions::new()

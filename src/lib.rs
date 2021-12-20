@@ -75,15 +75,26 @@ fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliEr
     where
     I: Iterator<Item = String>,
 {
+    let mut tag_or_comment_sign;
+    let mut tags = HashSet::new();
+
     let score_string = args.next()
         .ok_or(CliError::AddCommandArgsMissingDailyScore)?;
 
     let score = score_string.parse::<i8>()
         .map_err(|parse_error| CliError::AddCommandArgsInvalidDailyScore { score_string, parse_error })?;
 
+    loop {
+        tag_or_comment_sign = args.next();
+        match tag_or_comment_sign.as_deref() {
+            Some("--comment") | Some("-c") | None => break,
+            Some(tag) => tags.insert(tag.to_string())
+        };
+    };
+
     let comment: String = args.collect::<Vec<String>>().join(" ");
 
-    Ok(AddCommand { score, comment: Some(comment), datetime: None, config })
+    Ok(AddCommand { score, tags, comment: Some(comment), datetime: None, config })
 }
 
 fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, CliError>
@@ -95,7 +106,7 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
     loop {
         tag_or_type_sign = args.next();
         match tag_or_type_sign.as_deref() {
-            Some("-type") | Some("-t") | None => break,
+            Some("--type") | Some("-t") | None => break,
             Some(tag) => tags.insert(tag.to_string())
         };
     };
