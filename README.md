@@ -26,9 +26,9 @@ with some tools to analyze the data about yourself.
 All records currently maintained in a readable text file (`./howdy.journal` by default).
 To add a new record, run:
 ```
-howdy add 1 nice day
+howdy add 1 -c nice day
 ```
-this will add a record into journal file, that you rated your day with 1,
+this will add a record into journal file that you rated your day with 1,
 and will leave a comment "nice day" to your rate.
 Technically you can use any number between -128..127, but the ideal way to use it
 is to use just -1,0,1 - try to keep it as simple as possible.
@@ -40,23 +40,54 @@ howdy mood
 
 More strictly, command syntax looks like this:
 ```
-howdy [-f FILEPATH] add SCORE [COMMENT]
-howdy [-f FILEPATH] mood [REPORT_TYPE]
+howdy [-f FILEPATH] add SCORE [TAG ...] [-c COMMENT]
+howdy [-f FILEPATH] mood [TAG ...] [-t REPORT_TYPE]
 ```
 Here:
 
 - `FILEPATH` is a path to journal file, defaults to `./howdy.journal`;
 - `SCORE` is signed int from -128 to 127;
+- `TAG` is a string that can be assigned to a day rate, which can be used
+  to filter scores making input in the report;
 - `COMMENT` is a string that will be added to a journal to a day rate;
+  currently, there is no particular use of it other than making a note for yourself;
 - `REPORT_TYPE` is one of the possible report types:
   - `m` or `monthly`: sum up daily scores for last 30 days and display it
-(if no report type is specified, monthly option is considered);
+(if no report type is specified, the `monthly` option is considered);
   - `y` or `yearly`: sum up daily score for last 365 days and display it;
   - `mm` or `moving`: display 30 monthly reports for last 30 days.
+
+#### Examples:
+
+Rate the current day with `1`, mark it with `sports` and `friends` tags,
+and attach a note `"good party with friends"` to this record:
+
+```
+howdy -f ./howdy.journal add 1 sports friends --comment good party with friends
+```
+
+Rate the current day with `-1`, attach a note `"42"` to this record:
+
+```
+howdy add -1 -c 42
+```
+
+Read records from `./howdy.journal` over the last month,
+and display total summary score:
+
+```
+howdy mood
+```
+
+Read records from `./howdy.journal` over the last year that have a tag `sports`,
+and display total summary score:
+
+```
+howdy mood sports -t yearly
+```
   
 ### Potential enhancements?
 
-- add tagging system, so you could mark some days, and filter report by tags;
 - add exporting to xlsx;
 - add exporting to gnu plot;
 - add GUI (let's be honest, no one wants to type a command with args in terminal

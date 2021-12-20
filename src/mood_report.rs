@@ -1,28 +1,15 @@
 use chrono::Local;
 use chrono::Duration;
+use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
 
-pub struct MoodReport {
-    daily_scores: Vec<DailyScore>,
+pub struct MoodReport<'a> {
+    pub daily_scores: &'a Vec<DailyScore>,
+    pub tags: &'a HashSet<String>,
 }
 
-impl MoodReport {
-    #[cfg(test)]
-    pub fn new() -> Self {
-        Self { daily_scores: vec![] }
-    }
-
-    pub fn from_daily_scores(daily_scores: Vec<DailyScore>) -> Self {
-        Self { daily_scores }
-    }
-
-    #[cfg(test)]
-    pub fn add_score(&mut self, daily_score: DailyScore) -> &Self {
-        self.daily_scores.push(daily_score);
-        self
-    }
-
+impl<'a> MoodReport<'a> {
     #[cfg(test)]
     pub fn len(&self) -> usize {
         self.daily_scores.len()
@@ -56,6 +43,7 @@ impl MoodReport {
             self.daily_scores
                 .iter()
                 .filter(filter_fn)
+                .filter(|daily_score| self.tags.iter().all(|tag| daily_score.tags.contains(tag)))
                 .map(|daily_score| daily_score.score as i32)
                 .sum()
         }
@@ -86,28 +74,11 @@ mod tests {
     use chrono::{Utc, FixedOffset, DateTime};
 
     #[test]
-    fn builds_default() {
-        let mood = MoodReport::new();
-
-        assert_eq!(mood.len(), 0);
-    }
-
-    #[test]
     fn consumes_scores() {
         let scores = vec![DailyScore::new(), DailyScore::new()];
-        let mood_report = MoodReport::from_daily_scores(scores);
+        let mood_report = MoodReport { daily_scores: &scores, tags: &HashSet::new() };
 
         assert_eq!(mood_report.len(), 2);
-    }
-
-    #[test]
-    fn adds_score() {
-        let mut mood = MoodReport::new();
-        let daily_score = DailyScore::new();
-        let another_daily_score = DailyScore::new();
-
-        assert_eq!(mood.add_score(daily_score).len(), 1);
-        assert_eq!(mood.add_score(another_daily_score).len(), 2);
     }
 
     #[test]
@@ -115,32 +86,104 @@ mod tests {
         let daily_score = DailyScore::with_score(1);
         let another_daily_score = DailyScore::with_score(2);
         let old_daily_score =
-            DailyScore { score: 5, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(40) };
+            DailyScore {
+                score: 5,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset() - Duration::days(40)
+            };
 
         let mood_report =
-            MoodReport::from_daily_scores(vec![daily_score, another_daily_score, old_daily_score]);
+            MoodReport {
+                daily_scores: &vec![daily_score, another_daily_score, old_daily_score],
+                tags: &HashSet::new(),
+            };
+
 
         assert_eq!(mood_report.thirty_days_mood(), 3);
+    }
+
+    #[test]
+    fn thirty_days_mood_with_tags() {
+        let tag: HashSet<String> = vec!["tag".to_string()].into_iter().collect();
+        let tag2: HashSet<String> = vec!["tag2".to_string()].into_iter().collect();
+
+        let daily_score =
+            DailyScore {
+                score: 1,
+                tags: tag2.clone(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset(),
+            };
+
+        let another_daily_score =
+            DailyScore {
+                score: 2,
+                tags: tag.clone(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset() - Duration::days(20)
+            };
+
+        let old_daily_score =
+            DailyScore {
+                score: 5,
+                tags: tag.clone(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset() - Duration::days(40)
+            };
+
+        let daily_scores = vec![daily_score, another_daily_score, old_daily_score];
+
+        let tag_mood_report =
+            MoodReport {
+                daily_scores: &daily_scores,
+                tags: &tag,
+            };
+
+        let multitag_mood_report =
+            MoodReport {
+                daily_scores: &daily_scores,
+                tags: &vec!["tag".to_string(), "tag2".to_string()].into_iter().collect(),
+            };
+
+        assert_eq!(tag_mood_report.thirty_days_mood(), 2);
+        assert_eq!(multitag_mood_report.thirty_days_mood(), 0);
     }
 
     #[test]
     fn thirty_days_moving_mood() {
         let today_daily_score = DailyScore::with_score(1);
         let beginning_of_month_daily_score =
-            DailyScore { score: -1, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(25) - Duration::minutes(1) };
+            DailyScore {
+                score: -1,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset() - Duration::days(25) - Duration::minutes(1)
+            };
         let fifty_days_ago_daily_score =
-            DailyScore { score: 2, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(50) + Duration::minutes(1) };
+            DailyScore {
+                score: 2,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset() - Duration::days(50) + Duration::minutes(1)
+            };
         let ninty_days_ago_daily_score =
-            DailyScore { score: 20, comment: "".to_string(), datetime: now_with_fixed_offset() - Duration::days(90) };
+            DailyScore {
+                score: 20,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: now_with_fixed_offset() - Duration::days(90)
+            };
 
-        let mood_report = MoodReport::from_daily_scores(
-            vec![
-                beginning_of_month_daily_score,
-                fifty_days_ago_daily_score,
-                ninty_days_ago_daily_score,
-                today_daily_score
-            ]
-        );
+        let mood_report = MoodReport {
+            daily_scores: &vec![
+                    beginning_of_month_daily_score,
+                    fifty_days_ago_daily_score,
+                    ninty_days_ago_daily_score,
+                    today_daily_score
+                ],
+            tags: &HashSet::new(),
+        };
 
         assert_eq!(mood_report.thirty_days_moving_mood(),
             vec![
@@ -153,19 +196,34 @@ mod tests {
 
     #[test]
     fn yearly_mood() {
+        let no_tags = HashSet::new();
+        let tag_tags: HashSet<String> = vec!["tag".to_string()].into_iter().collect();
+
         let daily_score = DailyScore::with_score(1);
         let another_daily_score = DailyScore::with_score(2);
         let forty_days_ago_score =
-            DailyScore { score: 5, comment: "".to_string(), datetime: now_with_fixed_offset()  - Duration::days(40) };
+            DailyScore {
+                score: 5,
+                datetime: now_with_fixed_offset()  - Duration::days(40),
+                tags: no_tags.clone(),
+                comment: "".to_string(),
+            };
 
         let old_score =
-            DailyScore { score: -4, datetime: now_with_fixed_offset() - Duration::weeks(55), comment: "".to_string() };
+            DailyScore {
+                score: -4,
+                datetime: now_with_fixed_offset() - Duration::weeks(55),
+                tags: tag_tags.clone(),
+                comment: "".to_string(),
+            };
 
-        let mood_report = MoodReport::from_daily_scores(
-            vec![daily_score, another_daily_score, forty_days_ago_score, old_score]
-        );
+        let daily_scores = vec![daily_score, another_daily_score, forty_days_ago_score, old_score];
+
+        let mood_report = MoodReport { daily_scores: &daily_scores, tags: &no_tags };
+        let tagged_mood_report = MoodReport { daily_scores: &daily_scores, tags: &tag_tags };
 
         assert_eq!(mood_report.yearly_mood(), 8);
+        assert_eq!(tagged_mood_report.yearly_mood(), 0);
     }
 
     fn now_with_fixed_offset() -> DateTime<FixedOffset> {

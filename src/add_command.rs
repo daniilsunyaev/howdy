@@ -4,6 +4,7 @@ use std::fs::OpenOptions;
 use std::io;
 use std::fmt;
 use std::error::Error;
+use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
 use crate::Config;
@@ -11,6 +12,7 @@ use crate::Config;
 pub struct AddCommand {
     pub score: i8,
     pub datetime: Option<DateTime<Local>>,
+    pub tags: HashSet<String>,
     pub comment: Option<String>,
     pub config: Config,
 }
@@ -40,11 +42,14 @@ impl fmt::Display for AddCommandError {
 }
 
 impl AddCommand {
-    pub fn run(&self) -> Result<(), AddCommandError> {
+    pub fn run(self) -> Result<(), AddCommandError> {
         let local_datetime = self.datetime.unwrap_or_else(Local::now);
+        let config = self.config;
+
         let daily_score = DailyScore {
             score: self.score,
-            comment: self.comment.clone().unwrap_or_else(String::new),
+            tags: self.tags,
+            comment: self.comment.unwrap_or_else(String::new),
             datetime: local_datetime.with_timezone(local_datetime.offset())
         };
 
@@ -52,11 +57,11 @@ impl AddCommand {
             .read(true)
             .append(true)
             .create(true)
-            .open(self.config.file_path.clone())
-            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: self.config.file_path.clone(), open_error })?;
+            .open(config.file_path.clone())
+            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: config.file_path.clone(), open_error })?;
 
         writeln!(file, "{}", daily_score.to_s())
-            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path: self.config.file_path.clone(), write_error })?;
+            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path: config.file_path.clone(), write_error })?;
 
         Ok(())
     }
