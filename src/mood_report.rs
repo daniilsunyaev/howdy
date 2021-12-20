@@ -9,7 +9,7 @@ pub struct MoodReport<'a> {
     pub tags: &'a HashSet<String>,
 }
 
-impl <'a> MoodReport<'a> {
+impl<'a> MoodReport<'a> {
     #[cfg(test)]
     pub fn len(&self) -> usize {
         self.daily_scores.len()

@@ -21,9 +21,9 @@ fn check_mood() {
     let journal = prepare_empty_journal_file();
 
     let date_format = "%Y-%m-%d %H:%M:%S %z";
-    let line_old = format!("{} | {} | tag |\n", (Utc::now() - Duration::days(40)).format(date_format), 4);
-    let line_recent = format!("{} | {} | tag2 |\n", Utc::now().format(date_format), 2);
-    let line_new = format!("{} | {} | tag | foo", Utc::now().format(date_format), 1);
+    let line_old = format!("{} | 4 | tag |\n", (Utc::now() - Duration::days(40)).format(date_format));
+    let line_recent = format!("{} | 2 | tag2 |\n", Utc::now().format(date_format));
+    let line_new = format!("{} | 1 | tag | foo", Utc::now().format(date_format));
 
     journal
         .write_str(
@@ -41,7 +41,7 @@ fn check_mood() {
     let mut tagged_cmd = Command::cargo_bin("howdy").unwrap();
     tagged_cmd.arg("-f")
         .arg(journal.path())
-        .args(&["mood", "tag", "-t", "m"])
+        .args(&["mood", "tag", "--type", "m"])
         .assert()
         .stdout("30-days mood: 1\n");
 }

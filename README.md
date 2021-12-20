@@ -57,7 +57,7 @@ Here:
   - `y` or `yearly`: sum up daily score for last 365 days and display it;
   - `mm` or `moving`: display 30 monthly reports for last 30 days.
 
-####Examples:
+#### Examples:
 
 Rate the current day with `1`, mark it with `sports` and `friends` tags,
 and attach a note `"good party with friends"` to this record:
@@ -69,7 +69,7 @@ howdy -f ./howdy.journal add 1 sports friends --comment good party with friends
 Rate the current day with `-1`, attach a note `"42"` to this record:
 
 ```
-howdy add -1  -c 42
+howdy add -1 -c 42
 ```
 
 Read records from `./howdy.journal` over the last month,
