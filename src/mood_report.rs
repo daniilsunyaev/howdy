@@ -29,7 +29,7 @@ impl<'a> MoodReport<'a> {
         self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= usual_year_ago.date())
     }
 
-    pub fn thirty_days_moving_mood(&self) -> Vec<i32> {
+    pub fn thirty_days_moving_mood(&self) -> Vec<(i64, i32)> {
         // from 29 days ago to now there are 30 calendar dates
         // also we use dates to verify if daily score records fit into frame
         // so 29-days frame covers 30 dates
@@ -48,20 +48,21 @@ impl<'a> MoodReport<'a> {
                 .sum()
         }
 
-    fn timeframed_moving_mood_report(&self, starts_at_days_ago: u32, ends_at_days_ago: u32, frame_size: u32) -> Vec<i32> {
+    fn timeframed_moving_mood_report(&self, starts_at_days_ago: u32, ends_at_days_ago: u32, frame_size: u32) -> Vec<(i64, i32)> {
         let mut hist = Vec::new();
         hist.reserve((starts_at_days_ago - ends_at_days_ago) as usize);
         let now = Local::now();
         let fixed_now = now.with_timezone(now.offset());
 
         for frame_ends_at_days_ago in (ends_at_days_ago..=starts_at_days_ago).rev() {
+            let frame_ends_at_timestamp = Local::now().timestamp() - (frame_ends_at_days_ago as i64 * 3600 * 24);
             let frame_end = fixed_now - Duration::days(frame_ends_at_days_ago as i64);
             let frame_start = frame_end - Duration::days(frame_size as i64);
             let sum = self
                 .filter_mood_sum(|daily_score| {
                     daily_score.datetime.date() >= frame_start.date() && daily_score.datetime.date() <= frame_end.date()
                 });
-            hist.push(sum);
+            hist.push((frame_ends_at_timestamp, sum));
         }
 
         hist
@@ -185,7 +186,7 @@ mod tests {
             tags: &HashSet::new(),
         };
 
-        assert_eq!(mood_report.thirty_days_moving_mood(),
+        assert_eq!(mood_report.thirty_days_moving_mood().iter().map(|val| val.1).collect::<Vec<i32>>(),
             vec![
                 2, 2, 2, 2, 1, 1, 1, 1, 1, -1,
                 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,

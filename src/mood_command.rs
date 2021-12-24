@@ -3,13 +3,13 @@ use std::io::{BufRead, BufReader};
 use std::fs::OpenOptions;
 use std::error::Error;
 use std::collections::HashSet;
-use gnuplot::*; // TODO: require only what we need
-use chrono::Local;
 
 use crate::daily_score;
 use crate::daily_score::DailyScore;
 use crate::mood_report::MoodReport;
 use crate::Config;
+
+mod plot;
 
 pub struct MoodCommand {
     pub config: Config,
@@ -86,22 +86,9 @@ impl MoodCommand {
             MoodReportType::Monthly => println!("30-days mood: {}", mood_report.thirty_days_mood()),
             MoodReportType::Yearly => println!("365-days mood: {}", mood_report.yearly_mood()),
             MoodReportType::MovingMonthly => {
-                let report = mood_report.thirty_days_moving_mood();
-                println!("30-days moving mood: {:?}", report);
-
-                let x1: Vec<usize> = (0..report.len()).rev()
-                    .map(|days_ago| Local::now().timestamp() as usize - days_ago * 3600 * 24)
-                    .collect();
-
-                let y = &report;
-
-                let mut fg = Figure::new();
-                fg.axes2d()
-                    .set_title("30-days moving cumulative mood", &[])
-                    .lines(x1, y, &[])
-                    .set_x_ticks(Some((Auto, 0)), &[Format("%D")], &[])
-                    .set_x_time(true);
-                fg.show().unwrap();
+                let data = mood_report.thirty_days_moving_mood();
+                println!("30-days moving mood: {:?}", data);
+                plot::draw(&data);
             }
         }
 
