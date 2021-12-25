@@ -1,6 +1,6 @@
 [package]
 name = "howdy"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Daniil Sunyaev <dasforrum@gmail.com>"]
 edition = "2018"
 
@@ -11,3 +11,4 @@ chrono = "0.4"
 assert_fs = "1.0"
 assert_cmd = "2.0"
 predicates = "2.1"
+gnuplot = "0.0.37"

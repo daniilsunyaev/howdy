@@ -18,5 +18,9 @@
 18. ✓ use dates in timezone for mood report purposes instead of x days ago from current time
 19. ✓ add readme
 20. ✓ add optional tags
-21. add export to gnu plot
-22. add export to xcel or open office calc format
+21. ✓ add export to gnu plot
+22. change weekly report to iterative weekly
+23. change monthly report to iterative monthly
+24. add iterative 7 days report
+23. add iterative 30 days report
+24. add export to xcel or open office calc format
