@@ -1,4 +1,4 @@
-use gnuplot::*; // TODO: require only what we need
+use gnuplot::{AxesCommon,Auto,CloseSentinel,Figure,Format,GnuplotInitError};
 
 const DATE_FORMAT: &str = "%d/%m/%Y"; // TODO: make it configurable
 
