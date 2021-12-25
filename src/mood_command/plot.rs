@@ -2,7 +2,7 @@ use gnuplot::*; // TODO: require only what we need
 
 const DATE_FORMAT: &str = "%d/%m/%Y"; // TODO: make it configurable
 
-pub fn draw<Tx, Ty>(data: &[(Tx, Ty)]) // TODO: probably this function should return result
+pub fn draw<Tx, Ty>(data: &[(Tx, Ty)]) -> Result<CloseSentinel, GnuplotInitError>
 where
     Tx: gnuplot::DataType + Copy,
     Ty: gnuplot::DataType + Copy,
@@ -16,5 +16,5 @@ where
         .lines(x, y, &[])
         .set_x_ticks(Some((Auto, 0)), &[Format(DATE_FORMAT)], &[])
         .set_x_time(true);
-    fg.show().unwrap();
+    fg.show()
 }

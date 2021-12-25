@@ -82,13 +82,17 @@ impl MoodCommand {
 
         let mood_report = MoodReport { daily_scores: &records, tags: &self.tags };
 
+        // TODO: all println calls should be moved to the cli app level when code will be splitted
+        // to core + cli app [+ gui app]
         match self.report_type {
             MoodReportType::Monthly => println!("30-days mood: {}", mood_report.thirty_days_mood()),
             MoodReportType::Yearly => println!("365-days mood: {}", mood_report.yearly_mood()),
             MoodReportType::MovingMonthly => {
                 let data = mood_report.thirty_days_moving_mood();
                 println!("30-days moving mood: {:?}", data);
-                plot::draw(&data);
+                if let Err(error) =  plot::draw(&data) {
+                    println!("Warning: can't init gnuplot: {:?}", error);
+                };
             }
         }
 
