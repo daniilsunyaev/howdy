@@ -130,7 +130,7 @@ where
     // skip exec filename
     cli_args.next();
 
-    let mut config = Config { file_path: JOURNAL_FILE_PATH.to_string() }; // TODO: check gnuplot availability
+    let mut config = Config { file_path: JOURNAL_FILE_PATH.to_string() };
 
     let mut argument = cli_args.next().ok_or(CliError::CommandNotProvided)?;
     if argument.as_str() == "-f" {
