@@ -116,6 +116,7 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
         Some("m") | Some("monthly") => MoodReportType::Monthly,
         Some("y") | Some("yearly") => MoodReportType::Yearly,
         Some("mm") | Some("moving") => MoodReportType::MovingMonthly,
+        Some("w") | Some("weekly") => MoodReportType::WeeklyIterative,
         None => MoodReportType::Monthly,
         Some(unrecognized_option) => return Err(CliError::MoodReportTypeInvalid(unrecognized_option.to_string())),
     };

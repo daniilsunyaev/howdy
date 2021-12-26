@@ -1,8 +1,11 @@
-use chrono::Local;
-use chrono::Duration;
+use chrono::{Local, Duration, Datelike};
 use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
+
+const HOUR_SECONDS: i64 = 3600;
+const DAY_SECONDS: i64 = HOUR_SECONDS * 24;
+const WEEK_SECONDS: i64 = DAY_SECONDS * 7;
 
 pub struct MoodReport<'a> {
     pub daily_scores: &'a Vec<DailyScore>,
@@ -20,6 +23,33 @@ impl<'a> MoodReport<'a> {
         let thirty_days_ago = (now - Duration::days(29)).with_timezone(now.offset());
 
         self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= thirty_days_ago.date())
+    }
+
+    pub fn iterative_weekly_mood(&self) -> Vec<(i64, i32)> {
+        let today = Local::now().date();
+        let last_monday = today.and_hms_nano(0, 0, 0, 0) - Duration::days(today.weekday().num_days_from_monday().into());
+        let mut data: Vec<(i64, i32)> = Vec::new();
+
+        for daily_score in self.daily_scores {
+            if daily_score.datetime >= last_monday { continue }
+            let seconds_before_last_monday = last_monday.timestamp() - daily_score.datetime.timestamp();
+            // Mon 00:00:00 belongs to this week and to the next Monday's report,
+            // so we have to subtract 1 second. Otherwise it will fall into previous week's report.
+            // Due to previous checks this value is always > 0 before subtraction, `as usize` is safe
+            let i = ((seconds_before_last_monday - 1) / WEEK_SECONDS) as usize;
+            let seconds_to_succ_monday = seconds_before_last_monday % WEEK_SECONDS;
+
+            // potentially we can reserve data space before loop, but first record usually is the oldest,
+            // so resize will happen only once in most of the cases
+            if i >= data.len() {
+                let mut len = data.len() as i64;
+                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - (len - 1) * WEEK_SECONDS, 0)});
+            }
+            data[i] = (daily_score.datetime.timestamp() + seconds_to_succ_monday, data[i].1 + daily_score.score as i32);
+        }
+        data.reverse();
+
+        data
     }
 
     pub fn yearly_mood(&self) -> i32 {
@@ -55,7 +85,7 @@ impl<'a> MoodReport<'a> {
         let fixed_now = now.with_timezone(now.offset());
 
         for frame_ends_at_days_ago in (ends_at_days_ago..=starts_at_days_ago).rev() {
-            let frame_ends_at_timestamp = Local::now().timestamp() - (frame_ends_at_days_ago as i64 * 3600 * 24);
+            let frame_ends_at_timestamp = Local::now().timestamp() - (frame_ends_at_days_ago as i64 * DAY_SECONDS);
             let frame_end = fixed_now - Duration::days(frame_ends_at_days_ago as i64);
             let frame_start = frame_end - Duration::days(frame_size as i64);
             let sum = self
@@ -72,7 +102,7 @@ impl<'a> MoodReport<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Utc, FixedOffset, DateTime};
+    use chrono::{FixedOffset, DateTime};
 
     #[test]
     fn consumes_scores() {
@@ -80,6 +110,52 @@ mod tests {
         let mood_report = MoodReport { daily_scores: &scores, tags: &HashSet::new() };
 
         assert_eq!(mood_report.len(), 2);
+    }
+
+    #[test]
+    fn iterative_weekly_mood() {
+        let daily_score = DailyScore::with_score(-10);
+        let last_week_daily_score =
+            DailyScore {
+                score: 2,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: last_monday() - Duration::days(1)
+            };
+
+        let another_last_week_daily_score =
+            DailyScore {
+                score: 3,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: last_monday() - Duration::days(2)
+            };
+
+        let old_daily_score =
+            DailyScore {
+                score: 4,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: last_monday() - Duration::days(15)
+            };
+
+        let mood_report =
+            MoodReport {
+                daily_scores: &vec![
+                    another_last_week_daily_score,
+                    daily_score,
+                    old_daily_score,
+                    last_week_daily_score,
+                ],
+                tags: &HashSet::new(),
+            };
+
+        let previous_monday = last_monday() - Duration::days(7);
+        let pre_previous_monday = last_monday() - Duration::days(14);
+
+        assert_eq!(mood_report.iterative_weekly_mood(),
+            vec![(pre_previous_monday.timestamp(), 4), (previous_monday.timestamp(), 0), (last_monday().timestamp(), 5)]
+        )
     }
 
     #[test]
@@ -228,6 +304,12 @@ mod tests {
     }
 
     fn now_with_fixed_offset() -> DateTime<FixedOffset> {
-        Utc::now().with_timezone(&FixedOffset::east(0))
+        let now = Local::now();
+        now.with_timezone(now.offset())
+    }
+
+    fn last_monday() -> DateTime<FixedOffset> {
+        let today = now_with_fixed_offset().date();
+        today.and_hms_nano(0, 0, 0, 0) - Duration::days(today.weekday().num_days_from_monday().into())
     }
 }
