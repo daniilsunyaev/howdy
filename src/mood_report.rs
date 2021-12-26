@@ -33,9 +33,9 @@ impl<'a> MoodReport<'a> {
         for daily_score in self.daily_scores {
             if daily_score.datetime >= last_monday { continue }
             let seconds_before_last_monday = last_monday.timestamp() - daily_score.datetime.timestamp();
-            // Mon 00:00:00 belongs to the this week and to the next Monday's report,
-            // so we have to substract 1 second. Otherwise it will fall into previous week's report.
-            // Due to previous checks this value is always > 0 before sutraction, `as usize` is safe
+            // Mon 00:00:00 belongs to this week and to the next Monday's report,
+            // so we have to subtract 1 second. Otherwise it will fall into previous week's report.
+            // Due to previous checks this value is always > 0 before subtraction, `as usize` is safe
             let i = ((seconds_before_last_monday - 1) / WEEK_SECONDS) as usize;
             let seconds_to_succ_monday = seconds_before_last_monday % WEEK_SECONDS;
 
@@ -43,7 +43,7 @@ impl<'a> MoodReport<'a> {
             // so resize will happen only once in most of the cases
             if i >= data.len() {
                 let mut len = data.len() as i64;
-                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - len * WEEK_SECONDS, 0)});
+                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - (len - 1) * WEEK_SECONDS, 0)});
             }
             data[i] = (daily_score.datetime.timestamp() + seconds_to_succ_monday, data[i].1 + daily_score.score as i32);
         }
@@ -136,7 +136,7 @@ mod tests {
                 score: 4,
                 tags: HashSet::new(),
                 comment: "".to_string(),
-                datetime: last_monday() - Duration::days(8)
+                datetime: last_monday() - Duration::days(15)
             };
 
         let mood_report =
@@ -151,9 +151,10 @@ mod tests {
             };
 
         let previous_monday = last_monday() - Duration::days(7);
+        let pre_previous_monday = last_monday() - Duration::days(14);
 
         assert_eq!(mood_report.iterative_weekly_mood(),
-            vec![(previous_monday.timestamp(), 4), (last_monday().timestamp(), 5)]
+            vec![(pre_previous_monday.timestamp(), 4), (previous_monday.timestamp(), 0), (last_monday().timestamp(), 5)]
         )
     }
 
