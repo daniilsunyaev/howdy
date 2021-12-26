@@ -3,6 +3,10 @@ use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
 
+const HOUR_SECONDS: i64 = 3600;
+const DAY_SECONDS: i64 = HOUR_SECONDS * 24;
+const WEEK_SECONDS: i64 = DAY_SECONDS * 7;
+
 pub struct MoodReport<'a> {
     pub daily_scores: &'a Vec<DailyScore>,
     pub tags: &'a HashSet<String>,
@@ -32,16 +36,15 @@ impl<'a> MoodReport<'a> {
             // Mon 00:00:00 belongs to the this week and to the next Monday's report,
             // so we have to substract 1 second. Otherwise it will fall into previous week's report.
             // Due to previous checks this value is always > 0 before sutraction, `as usize` is safe
-            let i = (seconds_before_last_monday - 1) as usize / (3600 * 24 * 7);
-            let seconds_to_succ_monday = seconds_before_last_monday % (3600 * 24 * 7);
-            println!("date {:?}, secs before last mon {:?}, days before last mon {:?}", daily_score.datetime, seconds_before_last_monday, i);
+            let i = ((seconds_before_last_monday - 1) / WEEK_SECONDS) as usize;
+            let seconds_to_succ_monday = seconds_before_last_monday % WEEK_SECONDS;
 
             // potentially we can reserve data space before loop, but first record usually is the oldest,
             // so resize will happen only once in most of the cases
             if i >= data.len() {
-                data.resize(i + 1, (0, 0));
+                let mut len = data.len() as i64;
+                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - len * WEEK_SECONDS, 0)});
             }
-            println!("i {}, data {:?}, date {:?}, score {}", i, data, daily_score.datetime, daily_score.score);
             data[i] = (daily_score.datetime.timestamp() + seconds_to_succ_monday, data[i].1 + daily_score.score as i32);
         }
         data.reverse();
@@ -82,7 +85,7 @@ impl<'a> MoodReport<'a> {
         let fixed_now = now.with_timezone(now.offset());
 
         for frame_ends_at_days_ago in (ends_at_days_ago..=starts_at_days_ago).rev() {
-            let frame_ends_at_timestamp = Local::now().timestamp() - (frame_ends_at_days_ago as i64 * 3600 * 24);
+            let frame_ends_at_timestamp = Local::now().timestamp() - (frame_ends_at_days_ago as i64 * DAY_SECONDS);
             let frame_end = fixed_now - Duration::days(frame_ends_at_days_ago as i64);
             let frame_start = frame_end - Duration::days(frame_size as i64);
             let sum = self

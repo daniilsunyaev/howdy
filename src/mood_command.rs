@@ -18,6 +18,7 @@ pub struct MoodCommand {
 }
 
 pub enum MoodReportType {
+    WeeklyIterative,
     Monthly,
     Yearly,
     MovingMonthly,
@@ -87,12 +88,23 @@ impl MoodCommand {
         match self.report_type {
             MoodReportType::Monthly => println!("30-days mood: {}", mood_report.thirty_days_mood()),
             MoodReportType::Yearly => println!("365-days mood: {}", mood_report.yearly_mood()),
+            MoodReportType::WeeklyIterative => {
+                let data = mood_report.iterative_weekly_mood();
+                println!("weekly moods: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
+                if data.len() > 0 {
+                    if let Err(error) = plot::draw(&data) {
+                        println!("Warning: can't init gnuplot: {:?}", error);
+                    };
+                }
+            },
             MoodReportType::MovingMonthly => {
                 let data = mood_report.thirty_days_moving_mood();
-                println!("30-days moving mood: {:?}", data);
-                if let Err(error) =  plot::draw(&data) {
-                    println!("Warning: can't init gnuplot: {:?}", error);
-                };
+                println!("30-days moving mood: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
+                if data.len() > 0 {
+                    if let Err(error) = plot::draw(&data) {
+                        println!("Warning: can't init gnuplot: {:?}", error);
+                    };
+                }
             }
         }
 
