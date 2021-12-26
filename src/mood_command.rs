@@ -91,7 +91,7 @@ impl MoodCommand {
             MoodReportType::WeeklyIterative => {
                 let data = mood_report.iterative_weekly_mood();
                 println!("weekly moods: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
-                if data.len() > 0 {
+                if !data.is_empty() {
                     if let Err(error) = plot::draw(&data) {
                         println!("Warning: can't init gnuplot: {:?}", error);
                     };
@@ -100,7 +100,7 @@ impl MoodCommand {
             MoodReportType::MovingMonthly => {
                 let data = mood_report.thirty_days_moving_mood();
                 println!("30-days moving mood: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
-                if data.len() > 0 {
+                if !data.is_empty() {
                     if let Err(error) = plot::draw(&data) {
                         println!("Warning: can't init gnuplot: {:?}", error);
                     };
