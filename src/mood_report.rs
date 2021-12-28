@@ -54,9 +54,9 @@ impl<'a> MoodReport<'a> {
 
     pub fn iterative_monthly_mood(&self) -> Vec<(i64, i32)> {
         let now = Local::now();
-        let today = now.with_timezone(now.offset());
-        let mut earliest_datetime = today;
-        let beginning_of_current_month = Self::beginning_of_month(today);
+        let now_fixed_offset = now.with_timezone(now.offset());
+        let mut earliest_datetime = now_fixed_offset;
+        let beginning_of_current_month = Self::beginning_of_month(now_fixed_offset);
         let mut monthly_scores: HashMap<i64, i32> = HashMap::new();
 
         for daily_score in self.daily_scores {
@@ -65,17 +65,19 @@ impl<'a> MoodReport<'a> {
                 earliest_datetime = daily_score.datetime;
             }
 
+            // hash scores by 1st of corresponding score's month
             let monthly_score_sum = monthly_scores.entry(Self::beginning_of_month(daily_score.datetime).timestamp()).or_insert(0);
             *monthly_score_sum += daily_score.score as i32;
         }
-        println!("{:?}", monthly_scores);
 
         let mut data: Vec<(i64, i32)> = Vec::new();
         let mut beginning_of_month = beginning_of_current_month;
         while beginning_of_month > Self::beginning_of_month(earliest_datetime) {
             let beginning_of_previous_month = Self::beginning_of_previous_month(beginning_of_month);
-            let timestamp = beginning_of_previous_month.timestamp();
-            data.push((beginning_of_month.timestamp(), *monthly_scores.get(&timestamp).unwrap_or(&0)));
+            let previous_month_timestamp = beginning_of_previous_month.timestamp();
+            // we need to get from hash by prev month 1st day timestamp (because it is easier to save it by
+            // score's month 1st day timestamp), and store data as this month's 1st day timestamp
+            data.push((beginning_of_month.timestamp(), *monthly_scores.get(&previous_month_timestamp).unwrap_or(&0)));
             beginning_of_month = beginning_of_previous_month;
         }
         data.reverse();
