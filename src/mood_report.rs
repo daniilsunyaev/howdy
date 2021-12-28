@@ -1,5 +1,5 @@
 use chrono::{Local, Duration, Datelike};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use crate::daily_score::DailyScore;
 
@@ -52,6 +52,39 @@ impl<'a> MoodReport<'a> {
         data
     }
 
+    pub fn iterative_monthly_mood(&self) -> Vec<(i64, i32)> {
+        let now = Local::now();
+        let now_fixed_offset = now.with_timezone(now.offset());
+        let mut earliest_datetime = now_fixed_offset;
+        let beginning_of_current_month = Self::beginning_of_month(now_fixed_offset);
+        let mut monthly_scores: HashMap<i64, i32> = HashMap::new();
+
+        for daily_score in self.daily_scores {
+            if daily_score.datetime >= beginning_of_current_month { continue }
+            if earliest_datetime > daily_score.datetime {
+                earliest_datetime = daily_score.datetime;
+            }
+
+            // hash scores by 1st of corresponding score's month
+            let monthly_score_sum = monthly_scores.entry(Self::beginning_of_month(daily_score.datetime).timestamp()).or_insert(0);
+            *monthly_score_sum += daily_score.score as i32;
+        }
+
+        let mut data: Vec<(i64, i32)> = Vec::new();
+        let mut beginning_of_month = beginning_of_current_month;
+        while beginning_of_month > Self::beginning_of_month(earliest_datetime) {
+            let beginning_of_previous_month = Self::beginning_of_previous_month(beginning_of_month);
+            let previous_month_timestamp = beginning_of_previous_month.timestamp();
+            // we need to get from hash by prev month 1st day timestamp (because it is easier to save it by
+            // score's month 1st day timestamp), and store data as this month's 1st day timestamp
+            data.push((beginning_of_month.timestamp(), *monthly_scores.get(&previous_month_timestamp).unwrap_or(&0)));
+            beginning_of_month = beginning_of_previous_month;
+        }
+        data.reverse();
+
+        data
+    }
+
     pub fn yearly_mood(&self) -> i32 {
         let now = Local::now();
         let usual_year_ago = (now - Duration::days(364)).with_timezone(now.offset());
@@ -96,6 +129,14 @@ impl<'a> MoodReport<'a> {
         }
 
         hist
+    }
+
+    fn beginning_of_month(datetime: chrono::DateTime<chrono::FixedOffset>) -> chrono::DateTime<chrono::FixedOffset> {
+        datetime.date().and_hms_nano(0, 0, 0, 0) - Duration::days(datetime.day0().into())
+    }
+
+    fn beginning_of_previous_month(datetime: chrono::DateTime<chrono::FixedOffset>) -> chrono::DateTime<chrono::FixedOffset> {
+        Self::beginning_of_month(datetime.date().pred().and_hms(0, 0, 0))
     }
 }
 
@@ -155,6 +196,49 @@ mod tests {
 
         assert_eq!(mood_report.iterative_weekly_mood(),
             vec![(pre_previous_monday.timestamp(), 4), (previous_monday.timestamp(), 0), (last_monday().timestamp(), 5)]
+        )
+    }
+
+    #[test]
+    fn iterative_monthly_mood() {
+        let daily_score = DailyScore::with_score(-10);
+        let last_month_daily_score =
+            DailyScore {
+                score: 2,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: beginning_of_month() - Duration::days(1)
+            };
+
+        let another_last_month_daily_score =
+            DailyScore {
+                score: 3,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: beginning_of_month() - Duration::days(20)
+            };
+
+        let old_daily_score =
+            DailyScore {
+                score: 4,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: beginning_of_month() - Duration::days(35)
+            };
+
+        let mood_report =
+            MoodReport {
+                daily_scores: &vec![
+                    another_last_month_daily_score,
+                    old_daily_score,
+                    last_month_daily_score,
+                    daily_score,
+                ],
+                tags: &HashSet::new(),
+            };
+
+        assert_eq!(mood_report.iterative_monthly_mood(),
+            vec![(beginning_of_previous_month().timestamp(), 4), (beginning_of_month().timestamp(), 5)]
         )
     }
 
@@ -311,5 +395,15 @@ mod tests {
     fn last_monday() -> DateTime<FixedOffset> {
         let today = now_with_fixed_offset().date();
         today.and_hms_nano(0, 0, 0, 0) - Duration::days(today.weekday().num_days_from_monday().into())
+    }
+
+    fn beginning_of_month() -> DateTime<FixedOffset> {
+        let today = now_with_fixed_offset().date();
+        today.and_hms_nano(0, 0, 0, 0) - Duration::days(today.day0().into())
+    }
+
+    fn beginning_of_previous_month() -> DateTime<FixedOffset> {
+        let last_day_of_previos_month = beginning_of_month() - Duration::days(1);
+        last_day_of_previos_month - Duration::days(last_day_of_previos_month.day0().into())
     }
 }

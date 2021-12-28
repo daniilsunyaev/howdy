@@ -53,7 +53,8 @@ Here:
   currently, there is no particular use of it other than making a note for yourself;
 - `REPORT_TYPE` is one of the possible report types:
   - `w` or `weekly`: sum up daily scores in Mon-Sun intervals and display those;
-  - `m` or `monthly`: sum up daily scores for last 30 days and display it;
+  - `m` or `monthly`: sum up daily scores for monthly intervals and display those;
+  - `lm` or `last month`: sum up daily scores for last 30 days and display it;
 (if no report type is specified, the `monthly` option is considered);
   - `y` or `yearly`: sum up daily score for last 365 days and display it;
   - `mm` or `moving`: display 30 monthly reports for last 30 days.

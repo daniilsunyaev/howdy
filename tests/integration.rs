@@ -34,14 +34,14 @@ fn check_mood() {
     let mut cmd = Command::cargo_bin("howdy").unwrap();
     cmd.arg("-f")
         .arg(journal.path())
-        .args(&["mood", "-t", "m"])
+        .args(&["mood", "-t", "lm"])
         .assert()
         .stdout("30-days mood: 3\n");
 
     let mut tagged_cmd = Command::cargo_bin("howdy").unwrap();
     tagged_cmd.arg("-f")
         .arg(journal.path())
-        .args(&["mood", "tag", "--type", "m"])
+        .args(&["mood", "tag", "--type", "lm"])
         .assert()
         .stdout("30-days mood: 1\n");
 }
