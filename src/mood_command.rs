@@ -19,6 +19,7 @@ pub struct MoodCommand {
 
 pub enum MoodReportType {
     WeeklyIterative,
+    SevenDaysIterative,
     Monthly,
     MonthlyIterative,
     Yearly,
@@ -100,6 +101,15 @@ impl MoodCommand {
             },
             MoodReportType::WeeklyIterative => {
                 let data = mood_report.iterative_weekly_mood();
+                println!("weekly moods: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
+                if !data.is_empty() {
+                    if let Err(error) = plot::draw(&data) {
+                        println!("Warning: can't init gnuplot: {:?}", error);
+                    };
+                }
+            },
+            MoodReportType::SevenDaysIterative => {
+                let data = mood_report.iterative_seven_days_mood();
                 println!("weekly moods: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
                 if !data.is_empty() {
                     if let Err(error) = plot::draw(&data) {

@@ -1,5 +1,7 @@
 use chrono::{Local, Duration, Datelike};
 use std::collections::{HashSet, HashMap};
+use std::convert::TryInto;
+use std::num::TryFromIntError;
 
 use crate::daily_score::DailyScore;
 
@@ -41,11 +43,39 @@ impl<'a> MoodReport<'a> {
 
             // potentially we can reserve data space before loop, but first record usually is the oldest,
             // so resize will happen only once in most of the cases
+            // TODO: extract tho method?
             if i >= data.len() {
                 let mut len = data.len() as i64;
-                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - (len - 1) * WEEK_SECONDS, 0)});
+                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - (len - 1) * WEEK_SECONDS, 0) });
             }
             data[i] = (daily_score.datetime.timestamp() + seconds_to_succ_monday, data[i].1 + daily_score.score as i32);
+        }
+        data.reverse();
+
+        data
+    }
+
+    pub fn iterative_seven_days_mood(&self) -> Vec<(i64, i32)> {
+        let today = Local::now().date();
+        let beginning_of_day = today.and_hms_nano(0, 0, 0, 0);
+        let mut data: Vec<(i64, i32)> = Vec::new();
+
+        for daily_score in self.daily_scores {
+            let seconds_before_today = beginning_of_day.timestamp() - daily_score.datetime.timestamp();
+            // 7 days ago 00:00:00 belongs to this period and to the current period's report,
+            // so we have to subtract 1 second. Otherwise it will fall into previous period's report.
+            let i_i64 = (seconds_before_today - 1) / WEEK_SECONDS;
+            let i_convert: Result<usize, TryFromIntError> = i_i64.try_into();
+            if i_convert.is_err() { continue };
+
+            let i: usize = i_convert.unwrap();
+            if i >= data.len() {
+                let mut len = data.len() as i64;
+                data.resize_with(i + 1, || { len += 1; (beginning_of_day.timestamp() - (len - 1) * WEEK_SECONDS, 0) });
+            }
+
+            let seconds_to_period_timestamp = seconds_before_today % WEEK_SECONDS;
+            data[i] = (daily_score.datetime.timestamp() + seconds_to_period_timestamp, data[i].1 + daily_score.score as i32);
         }
         data.reverse();
 
@@ -196,6 +226,55 @@ mod tests {
 
         assert_eq!(mood_report.iterative_weekly_mood(),
             vec![(pre_previous_monday.timestamp(), 4), (previous_monday.timestamp(), 0), (last_monday().timestamp(), 5)]
+        )
+    }
+
+    #[test]
+    fn iterative_seven_days_mood() {
+        let daily_score = DailyScore::with_score(-10);
+        let last_week_daily_score =
+            DailyScore {
+                score: 2,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: daily_score.datetime - Duration::days(1)
+            };
+
+        let another_last_week_daily_score =
+            DailyScore {
+                score: 3,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: daily_score.datetime - Duration::days(2)
+            };
+
+        let old_daily_score =
+            DailyScore {
+                score: 4,
+                tags: HashSet::new(),
+                comment: "".to_string(),
+                datetime: daily_score.datetime - Duration::days(15)
+            };
+
+        let mood_report =
+            MoodReport {
+                daily_scores: &vec![
+                    another_last_week_daily_score,
+                    old_daily_score,
+                    last_week_daily_score,
+                    daily_score,
+                ],
+                tags: &HashSet::new(),
+            };
+
+        assert_eq!(mood_report.iterative_seven_days_mood().len(), 3);
+
+        let report_timestamp = mood_report.iterative_seven_days_mood()[2].0;
+        let previous_period_end = report_timestamp - WEEK_SECONDS;
+        let pre_previous_period_end = report_timestamp - 2 * WEEK_SECONDS;
+
+        assert_eq!(mood_report.iterative_seven_days_mood(),
+            vec![(pre_previous_period_end, 4), (previous_period_end, 0), (report_timestamp, -5)]
         )
     }
 
