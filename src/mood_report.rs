@@ -1,7 +1,6 @@
 use chrono::{Local, Duration, Datelike, DateTime, FixedOffset};
 use std::collections::{HashSet, HashMap};
-use std::convert::TryInto;
-use std::num::TryFromIntError;
+use std::convert::TryFrom;
 
 use crate::daily_score::DailyScore;
 
@@ -134,10 +133,10 @@ impl<'a> MoodReport<'a> {
             let i_i64 = (seconds_before_report_end - 1) / period;
 
             // drop anything in the future or beyod platform's max len periods ago
-            let i_convert: Result<usize, TryFromIntError> = i_i64.try_into();
+            let i_convert = usize::try_from(i_i64);
             if i_convert.is_err() { continue };
 
-            let i: usize = i_convert.unwrap();
+            let i = i_convert.unwrap();
             let seconds_to_next_period = seconds_before_report_end % period;
 
             // potentially we can reserve data space before loop, but first record usually is the oldest,
