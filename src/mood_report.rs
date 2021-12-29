@@ -1,4 +1,4 @@
-use chrono::{Local, Duration, Datelike};
+use chrono::{Local, Duration, Datelike, DateTime, FixedOffset};
 use std::collections::{HashSet, HashMap};
 use std::convert::TryInto;
 use std::num::TryFromIntError;
@@ -28,58 +28,17 @@ impl<'a> MoodReport<'a> {
     }
 
     pub fn iterative_weekly_mood(&self) -> Vec<(i64, i32)> {
-        let today = Local::now().date();
+        let now = Local::now();
+        let today = now.with_timezone(now.offset()).date();
         let last_monday = today.and_hms_nano(0, 0, 0, 0) - Duration::days(today.weekday().num_days_from_monday().into());
-        let mut data: Vec<(i64, i32)> = Vec::new();
-
-        for daily_score in self.daily_scores {
-            if daily_score.datetime >= last_monday { continue }
-            let seconds_before_last_monday = last_monday.timestamp() - daily_score.datetime.timestamp();
-            // Mon 00:00:00 belongs to this week and to the next Monday's report,
-            // so we have to subtract 1 second. Otherwise it will fall into previous week's report.
-            // Due to previous checks this value is always > 0 before subtraction, `as usize` is safe
-            let i = ((seconds_before_last_monday - 1) / WEEK_SECONDS) as usize;
-            let seconds_to_succ_monday = seconds_before_last_monday % WEEK_SECONDS;
-
-            // potentially we can reserve data space before loop, but first record usually is the oldest,
-            // so resize will happen only once in most of the cases
-            // TODO: extract tho method?
-            if i >= data.len() {
-                let mut len = data.len() as i64;
-                data.resize_with(i + 1, || { len += 1; (last_monday.timestamp() - (len - 1) * WEEK_SECONDS, 0) });
-            }
-            data[i] = (daily_score.datetime.timestamp() + seconds_to_succ_monday, data[i].1 + daily_score.score as i32);
-        }
-        data.reverse();
-
-        data
+        self.iterative_const_period_report(last_monday, WEEK_SECONDS)
     }
 
     pub fn iterative_seven_days_mood(&self) -> Vec<(i64, i32)> {
-        let today = Local::now().date();
-        let beginning_of_day = today.and_hms_nano(0, 0, 0, 0);
-        let mut data: Vec<(i64, i32)> = Vec::new();
-
-        for daily_score in self.daily_scores {
-            let seconds_before_today = beginning_of_day.timestamp() - daily_score.datetime.timestamp();
-            // 7 days ago 00:00:00 belongs to this period and to the current period's report,
-            // so we have to subtract 1 second. Otherwise it will fall into previous period's report.
-            let i_i64 = (seconds_before_today - 1) / WEEK_SECONDS;
-            let i_convert: Result<usize, TryFromIntError> = i_i64.try_into();
-            if i_convert.is_err() { continue };
-
-            let i: usize = i_convert.unwrap();
-            if i >= data.len() {
-                let mut len = data.len() as i64;
-                data.resize_with(i + 1, || { len += 1; (beginning_of_day.timestamp() - (len - 1) * WEEK_SECONDS, 0) });
-            }
-
-            let seconds_to_period_timestamp = seconds_before_today % WEEK_SECONDS;
-            data[i] = (daily_score.datetime.timestamp() + seconds_to_period_timestamp, data[i].1 + daily_score.score as i32);
-        }
-        data.reverse();
-
-        data
+        let now = Local::now();
+        let today = now.with_timezone(now.offset()).date();
+        let beginning_of_next_day = today.succ().and_hms_nano(0, 0, 0, 0);
+        self.iterative_const_period_report(beginning_of_next_day, WEEK_SECONDS)
     }
 
     pub fn iterative_monthly_mood(&self) -> Vec<(i64, i32)> {
@@ -161,11 +120,44 @@ impl<'a> MoodReport<'a> {
         hist
     }
 
-    fn beginning_of_month(datetime: chrono::DateTime<chrono::FixedOffset>) -> chrono::DateTime<chrono::FixedOffset> {
+    fn iterative_const_period_report(&self, report_ends_at: DateTime<FixedOffset>, period: i64) -> Vec<(i64, i32)> {
+        let mut data = Vec::new();
+        let filtered_daily_scores = self.daily_scores
+            .iter()
+            .filter(|daily_score| self.tags.iter().all(|tag| daily_score.tags.contains(tag)))
+            .filter(|daily_score| daily_score.datetime < report_ends_at);
+
+        for daily_score in filtered_daily_scores {
+            let seconds_before_report_end = report_ends_at.timestamp() - daily_score.datetime.timestamp();
+            // score at (report end - period duration) belongs to this period, so we have to subtract 1 second,
+            // otherwise it will fall into previous period's report.
+            let i_i64 = (seconds_before_report_end - 1) / period;
+
+            // drop anything in the future or beyod platform's max len periods ago
+            let i_convert: Result<usize, TryFromIntError> = i_i64.try_into();
+            if i_convert.is_err() { continue };
+
+            let i: usize = i_convert.unwrap();
+            let seconds_to_next_period = seconds_before_report_end % period;
+
+            // potentially we can reserve data space before loop, but first record usually is the oldest,
+            // so resize will happen only once in most of the cases
+            if i >= data.len() {
+                let mut len = data.len() as i64;
+                data.resize_with(i + 1, || { len += 1; (report_ends_at.timestamp() - (len - 1) * period, 0) });
+            }
+
+            data[i] = (daily_score.datetime.timestamp() + seconds_to_next_period, data[i].1 + daily_score.score as i32);
+        }
+        data.reverse();
+        data
+    }
+
+    fn beginning_of_month(datetime: DateTime<FixedOffset>) -> DateTime<FixedOffset> {
         datetime.date().and_hms_nano(0, 0, 0, 0) - Duration::days(datetime.day0().into())
     }
 
-    fn beginning_of_previous_month(datetime: chrono::DateTime<chrono::FixedOffset>) -> chrono::DateTime<chrono::FixedOffset> {
+    fn beginning_of_previous_month(datetime: DateTime<FixedOffset>) -> DateTime<FixedOffset> {
         Self::beginning_of_month(datetime.date().pred().and_hms(0, 0, 0))
     }
 }
@@ -173,7 +165,6 @@ impl<'a> MoodReport<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{FixedOffset, DateTime};
 
     #[test]
     fn consumes_scores() {
