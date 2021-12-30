@@ -36,14 +36,14 @@ fn check_mood() {
         .arg(journal.path())
         .args(&["mood", "-t", "lm"])
         .assert()
-        .stdout("30-days mood: 3\n");
+        .stdout("30-days mood: [3]\n");
 
     let mut tagged_cmd = Command::cargo_bin("howdy").unwrap();
     tagged_cmd.arg("-f")
         .arg(journal.path())
         .args(&["mood", "tag", "--type", "lm"])
         .assert()
-        .stdout("30-days mood: 1\n");
+        .stdout("30-days mood: [1]\n");
 }
 
 fn prepare_empty_journal_file() -> assert_fs::NamedTempFile {
