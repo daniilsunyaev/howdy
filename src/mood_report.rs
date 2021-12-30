@@ -19,11 +19,11 @@ impl<'a> MoodReport<'a> {
         self.daily_scores.len()
     }
 
-    pub fn thirty_days_mood(&self) -> i32 {
+    pub fn thirty_days_mood(&self) -> Vec<(i64, i32)> {
         let now = Local::now();
         let thirty_days_ago = (now - Duration::days(29)).with_timezone(now.offset());
 
-        self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= thirty_days_ago.date())
+        vec![(now.timestamp(), self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= thirty_days_ago.date()))]
     }
 
     pub fn iterative_weekly_mood(&self) -> Vec<(i64, i32)> {
@@ -80,11 +80,11 @@ impl<'a> MoodReport<'a> {
         data
     }
 
-    pub fn yearly_mood(&self) -> i32 {
+    pub fn yearly_mood(&self) -> Vec<(i64, i32)> {
         let now = Local::now();
         let usual_year_ago = (now - Duration::days(364)).with_timezone(now.offset());
 
-        self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= usual_year_ago.date())
+        vec![(now.timestamp(), self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= usual_year_ago.date()))]
     }
 
     pub fn thirty_days_moving_mood(&self) -> Vec<(i64, i32)> {
@@ -377,7 +377,9 @@ mod tests {
             };
 
 
-        assert_eq!(mood_report.thirty_days_mood(), 3);
+        assert!(
+            matches!(mood_report.thirty_days_mood()[..], [(_, 3)])
+        );
     }
 
     #[test]
@@ -423,8 +425,12 @@ mod tests {
                 tags: &vec!["tag".to_string(), "tag2".to_string()].into_iter().collect(),
             };
 
-        assert_eq!(tag_mood_report.thirty_days_mood(), 2);
-        assert_eq!(multitag_mood_report.thirty_days_mood(), 0);
+        assert!(
+            matches!(tag_mood_report.thirty_days_mood()[..], [(_, 2)])
+        );
+        assert!(
+            matches!(multitag_mood_report.thirty_days_mood()[..], [(_, 0)])
+        );
     }
 
     #[test]
@@ -499,8 +505,12 @@ mod tests {
         let mood_report = MoodReport { daily_scores: &daily_scores, tags: &no_tags };
         let tagged_mood_report = MoodReport { daily_scores: &daily_scores, tags: &tag_tags };
 
-        assert_eq!(mood_report.yearly_mood(), 8);
-        assert_eq!(tagged_mood_report.yearly_mood(), 0);
+        assert!(
+            matches!(mood_report.yearly_mood()[..], [(_, 8)])
+        );
+        assert!(
+            matches!(tagged_mood_report.yearly_mood()[..], [(_, 0)])
+        );
     }
 
     fn now_with_fixed_offset() -> DateTime<FixedOffset> {
