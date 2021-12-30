@@ -22,6 +22,7 @@ pub enum MoodReportType {
     SevenDaysIterative,
     Monthly,
     MonthlyIterative,
+    ThirtyDaysIterative,
     Yearly,
     MovingMonthly,
 }
@@ -111,6 +112,15 @@ impl MoodCommand {
             MoodReportType::SevenDaysIterative => {
                 let data = mood_report.iterative_seven_days_mood();
                 println!("weekly moods: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
+                if !data.is_empty() {
+                    if let Err(error) = plot::draw(&data) {
+                        println!("Warning: can't init gnuplot: {:?}", error);
+                    };
+                }
+            },
+            MoodReportType::ThirtyDaysIterative => {
+                let data = mood_report.iterative_thirty_days_mood();
+                println!("thirty day intervals moods: {:?}", data.iter().map(|ts| ts.1).collect::<Vec<i32>>());
                 if !data.is_empty() {
                     if let Err(error) = plot::draw(&data) {
                         println!("Warning: can't init gnuplot: {:?}", error);
