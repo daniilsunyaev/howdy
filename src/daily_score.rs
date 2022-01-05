@@ -10,7 +10,7 @@ const DATE_FORMAT: &str = "%Y-%m-%d %H:%M:%S %z";
 pub struct DailyScore {
     pub score: i8,
     pub tags: HashSet<String>,
-    pub comment: String,
+    pub comment: Option<String>,
     pub datetime: DateTime<FixedOffset>,
 }
 
@@ -39,7 +39,7 @@ impl fmt::Display for ParseError {
 impl DailyScore {
     #[cfg(test)]
     pub fn new() -> Self {
-        Self { score: 0, comment: "".to_string(), tags: HashSet::new(), datetime: Utc::now().into() }
+        Self { score: 0, comment: None, tags: HashSet::new(), datetime: Utc::now().into() }
     }
 
     #[cfg(test)]
@@ -48,11 +48,20 @@ impl DailyScore {
     }
 
     pub fn to_s(&self) -> String {
-        format!("{} {} {} {} {} {} {}",
-                self.datetime.format(DATE_FORMAT), crate::JOURNAL_SEPARATOR,
-                self.score, crate::JOURNAL_SEPARATOR,
-                self.tags_string(), crate::JOURNAL_SEPARATOR,
-                self.comment)
+        let comment_string = match &self.comment {
+            Some(comment_string) => format!(" {}", comment_string),
+            None => "".to_string(),
+        };
+
+        format!("{} {} {} {} {} {}{}",
+                self.datetime.format(DATE_FORMAT),
+                crate::JOURNAL_SEPARATOR,
+                self.score,
+                crate::JOURNAL_SEPARATOR,
+                self.tags_string(),
+                crate::JOURNAL_SEPARATOR,
+                comment_string
+        )
     }
 
     pub fn parse(daily_score_string: &str) -> Result<Self, ParseError> {
@@ -71,22 +80,21 @@ impl DailyScore {
         let score = score_str.parse::<i8>()
             .map_err(|_| ParseError::InvalidScore(score_str.to_string()))?;
 
-        let tags: HashSet<String>;
         let tags_str = slice.next().unwrap_or("");
-        if !tags_str.is_empty() {
-            tags = tags_str.split(',').map(str::to_string).collect();
+        let tags = if tags_str.is_empty() {
+            HashSet::new()
         } else {
-            tags = HashSet::new();
-        }
+            tags_str.split(',').map(str::to_string).collect()
+        };
 
-        let comment = slice.next().unwrap_or("").to_string();
+        let comment = slice.next().map(str::to_string);
         Ok(DailyScore { score, tags, comment, datetime })
     }
 
     fn tags_string(&self) -> String {
-       let mut tags_vec = self.tags.iter().map(String::as_str).collect::<Vec<&str>>();
-       tags_vec.sort_unstable();
-       tags_vec.join(crate::TAGS_SEPARATOR)
+        let mut tags_vec = self.tags.iter().map(String::as_str).collect::<Vec<&str>>();
+        tags_vec.sort_unstable();
+        tags_vec.join(crate::TAGS_SEPARATOR)
     }
 }
 
@@ -101,7 +109,7 @@ mod tests {
         let local_date = FixedOffset::east(4 * 3600).ymd(2020, 1, 1).and_hms(9, 10, 11);
         let score = DailyScore {
             score: 1,
-            comment: "foo || bar".to_string(),
+            comment: Some("foo || bar".to_string()),
             tags: vec!["run".to_string(), "games".to_string()].into_iter().collect(),
             datetime: local_date.into()
         };
@@ -118,7 +126,7 @@ mod tests {
 
         let daily_score = daily_score_parse_result.unwrap();
         assert_eq!(daily_score.score, 1);
-        assert_eq!(daily_score.comment, "foo || bar");
+        assert_eq!(daily_score.comment, Some("foo || bar".to_string()));
         assert_eq!(daily_score.tags, HashSet::new());
         assert_eq!(Utc.ymd(2020, 2, 1).and_hms(7, 10, 11), daily_score.datetime);
     }
@@ -152,7 +160,7 @@ mod tests {
 
         assert_eq!(daily_score.score, 0);
         assert_eq!(daily_score.tags, HashSet::new());
-        assert_eq!(daily_score.comment, "");
+        assert_eq!(daily_score.comment, None);
     }
 
     #[test]
@@ -161,7 +169,7 @@ mod tests {
 
         assert_eq!(daily_score.score, 5);
         assert_eq!(daily_score.tags, HashSet::new());
-        assert_eq!(daily_score.comment, "");
+        assert_eq!(daily_score.comment, None);
     }
 
     #[test]
