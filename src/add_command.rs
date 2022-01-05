@@ -49,7 +49,7 @@ impl AddCommand {
         let daily_score = DailyScore {
             score: self.score,
             tags: self.tags,
-            comment: self.comment.unwrap_or_else(String::new),
+            comment: self.comment,
             datetime: local_datetime.with_timezone(local_datetime.offset())
         };
 

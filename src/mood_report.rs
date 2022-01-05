@@ -187,7 +187,7 @@ mod tests {
             DailyScore {
                 score: 2,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: last_monday() - Duration::days(1)
             };
 
@@ -195,7 +195,7 @@ mod tests {
             DailyScore {
                 score: 3,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: last_monday() - Duration::days(2)
             };
 
@@ -203,7 +203,7 @@ mod tests {
             DailyScore {
                 score: 4,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: last_monday() - Duration::days(15)
             };
 
@@ -233,7 +233,7 @@ mod tests {
             DailyScore {
                 score: 2,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: daily_score.datetime - Duration::days(1)
             };
 
@@ -241,7 +241,7 @@ mod tests {
             DailyScore {
                 score: 3,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: daily_score.datetime - Duration::days(2)
             };
 
@@ -249,7 +249,7 @@ mod tests {
             DailyScore {
                 score: 4,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: daily_score.datetime - Duration::days(15)
             };
 
@@ -282,7 +282,7 @@ mod tests {
             DailyScore {
                 score: 3,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: daily_score.datetime - Duration::days(20)
             };
 
@@ -290,7 +290,7 @@ mod tests {
             DailyScore {
                 score: 4,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: daily_score.datetime - Duration::days(61)
             };
 
@@ -322,7 +322,7 @@ mod tests {
             DailyScore {
                 score: 2,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: beginning_of_month() - Duration::days(1)
             };
 
@@ -330,7 +330,7 @@ mod tests {
             DailyScore {
                 score: 3,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: beginning_of_month() - Duration::days(20)
             };
 
@@ -338,7 +338,7 @@ mod tests {
             DailyScore {
                 score: 4,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: beginning_of_month() - Duration::days(35)
             };
 
@@ -366,7 +366,7 @@ mod tests {
             DailyScore {
                 score: 5,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset() - Duration::days(40)
             };
 
@@ -391,7 +391,7 @@ mod tests {
             DailyScore {
                 score: 1,
                 tags: tag2.clone(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset(),
             };
 
@@ -399,7 +399,7 @@ mod tests {
             DailyScore {
                 score: 2,
                 tags: tag.clone(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset() - Duration::days(20)
             };
 
@@ -407,7 +407,7 @@ mod tests {
             DailyScore {
                 score: 5,
                 tags: tag.clone(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset() - Duration::days(40)
             };
 
@@ -440,21 +440,21 @@ mod tests {
             DailyScore {
                 score: -1,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset() - Duration::days(25) - Duration::minutes(1)
             };
         let fifty_days_ago_daily_score =
             DailyScore {
                 score: 2,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset() - Duration::days(50) + Duration::minutes(1)
             };
         let ninty_days_ago_daily_score =
             DailyScore {
                 score: 20,
                 tags: HashSet::new(),
-                comment: "".to_string(),
+                comment: None,
                 datetime: now_with_fixed_offset() - Duration::days(90)
             };
 
@@ -489,7 +489,7 @@ mod tests {
                 score: 5,
                 datetime: now_with_fixed_offset()  - Duration::days(40),
                 tags: no_tags.clone(),
-                comment: "".to_string(),
+                comment: None,
             };
 
         let old_score =
@@ -497,7 +497,7 @@ mod tests {
                 score: -4,
                 datetime: now_with_fixed_offset() - Duration::weeks(55),
                 tags: tag_tags.clone(),
-                comment: "".to_string(),
+                comment: None,
             };
 
         let daily_scores = vec![daily_score, another_daily_score, forty_days_ago_score, old_score];
