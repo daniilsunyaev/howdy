@@ -49,16 +49,17 @@ impl DailyScore {
 
     pub fn to_s(&self) -> String {
         let comment_string = match &self.comment {
-            Some(comment_string) => format!(" {} {}", crate::JOURNAL_SEPARATOR, comment_string),
+            Some(comment_string) => format!(" {}", comment_string),
             None => "".to_string(),
         };
 
-        format!("{} {} {} {} {}{}",
+        format!("{} {} {} {} {} {}{}",
                 self.datetime.format(DATE_FORMAT),
                 crate::JOURNAL_SEPARATOR,
                 self.score,
                 crate::JOURNAL_SEPARATOR,
                 self.tags_string(),
+                crate::JOURNAL_SEPARATOR,
                 comment_string
         )
     }

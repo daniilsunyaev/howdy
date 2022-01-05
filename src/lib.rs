@@ -92,9 +92,14 @@ fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliEr
         };
     };
 
-    let comment: String = args.collect::<Vec<String>>().join(" ");
+    let comment_string: String = args.collect::<Vec<String>>().join(" ");
+    let comment = if comment_string.is_empty() {
+        None
+    } else {
+        Some(comment_string)
+    };
 
-    Ok(AddCommand { score, tags, comment: Some(comment), datetime: None, config })
+    Ok(AddCommand { score, tags, comment: comment, datetime: None, config })
 }
 
 fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, CliError>
