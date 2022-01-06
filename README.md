@@ -42,6 +42,7 @@ More strictly, command syntax looks like this:
 ```
 howdy [-f FILEPATH] add SCORE [TAG ...] [-c COMMENT]
 howdy [-f FILEPATH] mood [TAG ...] [-t REPORT_TYPE]
+howdy [-f FILEPATH] export [EXPORT_FILEPATH]
 ```
 Here:
 
@@ -49,8 +50,8 @@ Here:
 - `SCORE` is signed int from -128 to 127;
 - `TAG` is a string that can be assigned to a day rate, which can be used
   to filter scores making input in the report;
-- `COMMENT` is a string that will be added to a journal to a day rate;
-  currently, there is no particular use of it other than making a note for yourself;
+- `COMMENT` is a string that will be added to a journal to a day rate.
+  Currently, there is no particular use of it other than making a note for yourself;
 - `REPORT_TYPE` is one of the possible report types:
   - `w` or `weekly`: sum up daily scores in Mon-Sun intervals and display those;
   - `7d` or `7 days`: sum up daily scores in 7 days intervals (including today) and display those;
@@ -60,6 +61,8 @@ Here:
 (if no report type is specified, the `monthly` option is considered);
   - `y` or `yearly`: sum up daily score for last 365 days and display it;
   - `mm` or `moving`: display 30 monthly reports for last 30 days.
+- `EXPORT_FILEPATH` specifies where the exported data will be written to.
+  Currently only `.xlsx` export type supported.
 
 #### Examples:
 
@@ -92,9 +95,7 @@ howdy mood sports -t yearly
   
 ### Potential enhancements?
 
-- add exporting to xlsx;
-- add exporting to gnu plot;
 - add GUI (let's be honest, no one wants to type a command with args in terminal
 just record a digit);
-- work on a more advanced querying syntax;
+- work on a more advanced querying syntax.
 
