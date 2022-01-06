@@ -1,11 +1,11 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::Config;
+use crate::GlobalConfig;
 use crate::journal;
 
 pub struct ExportCommand {
-    pub config: Config,
+    pub global_config: GlobalConfig,
     pub export_type: ExportType,
     pub file_path: String,
 }
@@ -40,7 +40,7 @@ impl fmt::Display for ExportCommandError {
 
 impl ExportCommand {
     pub fn run(self) -> Result<(), ExportCommandError> {
-        let daily_scores = journal::read(&self.config.file_path)
+        let daily_scores = journal::read(&self.global_config.journal_file_path)
             .map_err(|journal_error| ExportCommandError::ReadError(journal_error))?;
 
         match self.export_type {

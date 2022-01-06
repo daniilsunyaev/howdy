@@ -3,13 +3,13 @@ use std::collections::HashSet;
 use std::fmt;
 
 use crate::mood_report::MoodReport;
-use crate::Config;
+use crate::GlobalConfig;
 use crate::journal;
 
 mod plot;
 
 pub struct MoodCommand {
-    pub config: Config,
+    pub global_config: GlobalConfig,
     pub report_type: MoodReportType,
     pub tags: HashSet<String>,
 }
@@ -54,7 +54,7 @@ impl fmt::Display for MoodCommandError {
 
 impl MoodCommand {
     pub fn run(self) -> Result<(), MoodCommandError> {
-        let daily_scores = journal::read(&self.config.file_path)
+        let daily_scores = journal::read(&self.global_config.journal_file_path)
             .map_err(|journal_error| MoodCommandError::JournalReadError(journal_error))?;
 
         let mood_report = MoodReport { daily_scores: &daily_scores, tags: &self.tags };

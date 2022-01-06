@@ -7,14 +7,14 @@ use std::error::Error;
 use std::collections::HashSet;
 
 use crate::daily_score::DailyScore;
-use crate::Config;
+use crate::GlobalConfig;
 
 pub struct AddCommand {
     pub score: i8,
     pub datetime: Option<DateTime<Local>>,
     pub tags: HashSet<String>,
     pub comment: Option<String>,
-    pub config: Config,
+    pub global_config: GlobalConfig,
 }
 
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl fmt::Display for AddCommandError {
 impl AddCommand {
     pub fn run(self) -> Result<(), AddCommandError> {
         let local_datetime = self.datetime.unwrap_or_else(Local::now);
-        let config = self.config;
+        let journal_file_path = self.global_config.journal_file_path;
 
         let daily_score = DailyScore {
             score: self.score,
@@ -57,11 +57,11 @@ impl AddCommand {
             .read(true)
             .append(true)
             .create(true)
-            .open(config.file_path.clone())
-            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: config.file_path.clone(), open_error })?;
+            .open(journal_file_path.clone())
+            .map_err(|open_error| AddCommandError::CannotOpenFile { file_path: journal_file_path.clone(), open_error })?;
 
         writeln!(file, "{}", daily_score.to_s())
-            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path: config.file_path.clone(), write_error })?;
+            .map_err(|write_error| AddCommandError::CannotWriteToFile { file_path: journal_file_path.clone(), write_error })?;
 
         Ok(())
     }

@@ -76,11 +76,11 @@ impl From<ExportCommandError> for CliError {
     }
 }
 
-pub struct Config {
-    pub file_path: String,
+pub struct GlobalConfig {
+    pub journal_file_path: String,
 }
 
-fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliError>
+fn build_add_command<I>(mut args: I, global_config: GlobalConfig) -> Result<AddCommand, CliError>
     where
     I: Iterator<Item = String>,
 {
@@ -108,10 +108,10 @@ fn build_add_command<I>(mut args: I, config: Config) -> Result<AddCommand, CliEr
         Some(comment_string)
     };
 
-    Ok(AddCommand { score, tags, comment: comment, datetime: None, config })
+    Ok(AddCommand { score, tags, comment: comment, datetime: None, global_config })
 }
 
-fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, CliError>
+fn build_mood_command<I>(mut args: I, global_config: GlobalConfig) -> Result<MoodCommand, CliError>
     where
     I: Iterator<Item = String>,
 {
@@ -138,17 +138,17 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
         Some(unrecognized_option) => return Err(CliError::MoodReportTypeInvalid(unrecognized_option.to_string())),
     };
 
-    Ok(MoodCommand { report_type, config, tags })
+    Ok(MoodCommand { report_type, global_config, tags })
 }
 
-fn build_export_command<I>(mut args: I, config: Config) -> Result<ExportCommand, CliError>
+fn build_export_command<I>(mut args: I, global_config: GlobalConfig) -> Result<ExportCommand, CliError>
     where
     I: Iterator<Item = String>,
 {
     let file_path = args.next().unwrap_or(XLSX_FILE_PATH.to_string());
     let export_type = ExportType::Xlsx;
 
-    Ok(ExportCommand { config, export_type, file_path })
+    Ok(ExportCommand { global_config, export_type, file_path })
 }
 
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
@@ -158,18 +158,18 @@ where
     // skip exec filename
     cli_args.next();
 
-    let mut config = Config { file_path: JOURNAL_FILE_PATH.to_string() };
+    let mut global_config = GlobalConfig { journal_file_path: JOURNAL_FILE_PATH.to_string() };
 
     let mut argument = cli_args.next().ok_or(CliError::CommandNotProvided)?;
     if argument.as_str() == "-f" {
-        config.file_path = cli_args.next().ok_or(CliError::FilenameNotProvided)?;
+        global_config.journal_file_path = cli_args.next().ok_or(CliError::FilenameNotProvided)?;
         argument = cli_args.next().ok_or(CliError::CommandNotProvided)?
     };
 
     match argument.as_str() {
-        "add" => build_add_command(cli_args, config)?.run()?,
-        "mood" => build_mood_command(cli_args, config)?.run()?,
-        "export" => build_export_command(cli_args, config)?.run()?,
+        "add" => build_add_command(cli_args, global_config)?.run()?,
+        "mood" => build_mood_command(cli_args, global_config)?.run()?,
+        "export" => build_export_command(cli_args, global_config)?.run()?,
         unrecognized_command => return Err(CliError::CommandNotRecognized(unrecognized_command.to_string())),
     }
 
