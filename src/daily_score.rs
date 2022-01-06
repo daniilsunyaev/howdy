@@ -65,8 +65,7 @@ impl DailyScore {
     }
 
     pub fn parse(daily_score_string: &str) -> Result<Self, ParseError> {
-        let spaced_separator = format!(" {}", crate::JOURNAL_SEPARATOR);
-        let mut slice = daily_score_string.splitn(4, &spaced_separator).map(str::trim);
+        let mut slice = daily_score_string.splitn(4, crate::JOURNAL_SEPARATOR).map(str::trim);
 
         let datetime_str = slice.next()
             .ok_or(ParseError::MissingDateTime)?;
@@ -148,7 +147,7 @@ mod tests {
 
     #[test]
     fn string_parsing() {
-        let daily_score_string = "2020-02-01 09:10:11 +0200 | 1 |  | foo || bar";
+        let daily_score_string = "2020-02-01 09:10:11 +0200|1 |  | foo || bar";
         let daily_score_parse_result = DailyScore::parse(daily_score_string);
 
         assert!(daily_score_parse_result.is_ok());
@@ -159,7 +158,7 @@ mod tests {
         assert_eq!(daily_score.tags, HashSet::new());
         assert_eq!(Utc.ymd(2020, 2, 1).and_hms(7, 10, 11), daily_score.datetime);
 
-        let daily_score_no_comment_string = "2020-02-01 09:10:11 +0200 | 1 | foo |";
+        let daily_score_no_comment_string = "2020-02-01 09:10:11 +0200 |1|foo |";
         let daily_score_no_comment_parse_result = DailyScore::parse(daily_score_no_comment_string);
 
         assert!(daily_score_no_comment_parse_result.is_ok());
@@ -177,10 +176,10 @@ mod tests {
             ParseError::InvalidDateTime("fooo".to_string()));
 
         assert_eq!(DailyScore::parse("foo|").err().unwrap(),
-            ParseError::InvalidDateTime("foo|".to_string()));
+            ParseError::InvalidDateTime("foo".to_string()));
 
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000|").err().unwrap(),
-            ParseError::InvalidDateTime("2020-02-01 09:10:11 +0000|".to_string()));
+            ParseError::InvalidScore("".to_string()));
 
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000").err().unwrap(), ParseError::MissingScore);
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | ").err().unwrap(),
@@ -189,8 +188,7 @@ mod tests {
         assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | foo").err().unwrap(),
             ParseError::InvalidScore("foo".to_string()));
 
-        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | 4|").err().unwrap(),
-            ParseError::InvalidScore("4|".to_string()));
+        assert_eq!(DailyScore::parse("2020-02-01 09:10:11 +0000 | 4|").err(), None)
     }
 
     #[test]

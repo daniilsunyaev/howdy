@@ -72,26 +72,21 @@ pub fn read(file_path: &str) -> Result<Vec<DailyScore>, JournalError> {
 pub fn write_xlsx(file_path: &str, daily_scores: &[DailyScore]) -> Result<(), JournalError> {
     let mut wb = Workbook::create(file_path);
     let mut sheet = wb.create_sheet("Daily Scores");
-    sheet.add_column(Column { width: 20.0 });
+    sheet.add_column(Column { width: 10.0 });
     sheet.add_column(Column { width: 5.0 });
     sheet.add_column(Column { width: 40.0 });
     sheet.add_column(Column { width: 50.0 });
 
     wb.write_sheet(&mut sheet, |sheet_writer| {
-        sheet_writer.append_row(row!["Date", "Score","Tags","Comment"])?;
+        sheet_writer.append_row(row!["Date", "Score", "Tags", "Comment"])?;
 
         for daily_score in daily_scores.iter() {
-            let comment = match &daily_score.comment {
-                Some(string) => string.as_str(),
-                None => "",
-            };
-
             sheet_writer
                 .append_row(row![
                             daily_score.datetime.date().naive_local(),
                             daily_score.score as f64,
                             daily_score.tags_string(),
-                            comment
+                            daily_score.comment.as_deref().unwrap_or("")
                 ])?
         };
         Ok(())

@@ -23,9 +23,6 @@ impl<'a> MoodReport<'a> {
         let now = Local::now();
         let thirty_days_ago = (now - Duration::days(29)).with_timezone(now.offset());
 
-        // println!("report tags: {:?}", self.tags);
-        // println!("daily scores: {:?}", self.daily_scores.iter().map(|ds| ds.tags.clone()).collect::<Vec<HashSet<String>>>());
-
         vec![(now.timestamp(), self.filter_mood_sum(|daily_score| daily_score.datetime.date() >= thirty_days_ago.date()))]
     }
 
