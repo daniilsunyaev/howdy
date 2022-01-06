@@ -42,6 +42,7 @@ More strictly, command syntax looks like this:
 ```
 howdy [-f FILEPATH] add SCORE [TAG ...] [-c COMMENT]
 howdy [-f FILEPATH] mood [TAG ...] [-t REPORT_TYPE]
+howdy [-f FILEPATH] export [EXPORT_FILEPATH]
 ```
 Here:
 
@@ -60,6 +61,7 @@ Here:
 (if no report type is specified, the `monthly` option is considered);
   - `y` or `yearly`: sum up daily score for last 365 days and display it;
   - `mm` or `moving`: display 30 monthly reports for last 30 days.
+- `EXPORT_FILEPATH` specifies where the exported data will be written to. Currently only `xlsx` supported.
 
 #### Examples:
 
@@ -92,9 +94,7 @@ howdy mood sports -t yearly
   
 ### Potential enhancements?
 
-- add exporting to xlsx;
-- add exporting to gnu plot;
 - add GUI (let's be honest, no one wants to type a command with args in terminal
 just record a digit);
-- work on a more advanced querying syntax;
+- work on a more advanced querying syntax.
 
