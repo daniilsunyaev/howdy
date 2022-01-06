@@ -15,6 +15,7 @@ mod daily_score;
 mod add_command;
 mod mood_command;
 mod mood_report;
+mod journal;
 mod test_helpers;
 
 #[derive(Debug)]
