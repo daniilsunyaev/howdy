@@ -41,12 +41,12 @@ impl fmt::Display for ExportCommandError {
 impl ExportCommand {
     pub fn run(self) -> Result<(), ExportCommandError> {
         let daily_scores = journal::read(&self.global_config.journal_file_path)
-            .map_err(|journal_error| ExportCommandError::ReadError(journal_error))?;
+            .map_err(ExportCommandError::ReadError)?;
 
         match self.export_type {
             ExportType::Xlsx =>  {
                 journal::write_xlsx(&self.file_path, &daily_scores)
-                    .map_err(|journal_error| ExportCommandError::WriteError(journal_error))?;
+                    .map_err(ExportCommandError::WriteError)?;
                 println!("Export to '{}' done", self.file_path);
             },
         }

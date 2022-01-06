@@ -69,7 +69,7 @@ pub fn read(file_path: &str) -> Result<Vec<DailyScore>, JournalError> {
     Ok(records)
 }
 
-pub fn write_xlsx(file_path: &str, daily_scores: &Vec<DailyScore>) -> Result<(), JournalError> {
+pub fn write_xlsx(file_path: &str, daily_scores: &[DailyScore]) -> Result<(), JournalError> {
     let mut wb = Workbook::create(file_path);
     let mut sheet = wb.create_sheet("Daily Scores");
     sheet.add_column(Column { width: 20.0 });
@@ -95,7 +95,7 @@ pub fn write_xlsx(file_path: &str, daily_scores: &Vec<DailyScore>) -> Result<(),
                 ])?
         };
         Ok(())
-    }).map_err(|xlsx_error| JournalError::XlsxWriteError(xlsx_error))?;
+    }).map_err(JournalError::XlsxWriteError)?;
 
     Ok(())
 }

@@ -55,7 +55,7 @@ impl fmt::Display for MoodCommandError {
 impl MoodCommand {
     pub fn run(self) -> Result<(), MoodCommandError> {
         let daily_scores = journal::read(&self.global_config.journal_file_path)
-            .map_err(|journal_error| MoodCommandError::JournalReadError(journal_error))?;
+            .map_err(MoodCommandError::JournalReadError)?;
 
         let mood_report = MoodReport { daily_scores: &daily_scores, tags: &self.tags };
 

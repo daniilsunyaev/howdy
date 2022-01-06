@@ -108,7 +108,7 @@ fn build_add_command<I>(mut args: I, global_config: GlobalConfig) -> Result<AddC
         Some(comment_string)
     };
 
-    Ok(AddCommand { score, tags, comment: comment, datetime: None, global_config })
+    Ok(AddCommand { score, tags, comment, datetime: None, global_config })
 }
 
 fn build_mood_command<I>(mut args: I, global_config: GlobalConfig) -> Result<MoodCommand, CliError>
@@ -145,7 +145,7 @@ fn build_export_command<I>(mut args: I, global_config: GlobalConfig) -> Result<E
     where
     I: Iterator<Item = String>,
 {
-    let file_path = args.next().unwrap_or(XLSX_FILE_PATH.to_string());
+    let file_path = args.next().unwrap_or_else(|| XLSX_FILE_PATH.to_string());
     let export_type = ExportType::Xlsx;
 
     Ok(ExportCommand { global_config, export_type, file_path })

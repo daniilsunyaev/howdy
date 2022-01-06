@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 chrono = "0.4"
 gnuplot = "0.0.37"
-simple_excel_writer = { verstion = "0.1.9", features = ["chrono"] }
+simple_excel_writer = { version = "0.1.9", features = ["chrono"] }
 
 [dev-dependencies]
 assert_fs = "1.0"
