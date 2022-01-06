@@ -65,8 +65,8 @@ impl DailyScore {
     }
 
     pub fn parse(daily_score_string: &str) -> Result<Self, ParseError> {
-        let spaced_separator = format!(" {} ", crate::JOURNAL_SEPARATOR);
-        let mut slice = daily_score_string.splitn(4, spaced_separator.as_str());
+        let spaced_separator = format!(" {}", crate::JOURNAL_SEPARATOR);
+        let mut slice = daily_score_string.splitn(4, &spaced_separator).map(str::trim);
 
         let datetime_str = slice.next()
             .ok_or(ParseError::MissingDateTime)?;
@@ -91,7 +91,7 @@ impl DailyScore {
         Ok(DailyScore { score, tags, comment, datetime })
     }
 
-    fn tags_string(&self) -> String {
+    pub fn tags_string(&self) -> String {
         let mut tags_vec = self.tags.iter().map(String::as_str).collect::<Vec<&str>>();
         tags_vec.sort_unstable();
         tags_vec.join(crate::TAGS_SEPARATOR)
@@ -103,6 +103,35 @@ mod tests {
     use chrono::prelude::TimeZone;
 
     use super::*;
+
+    #[test]
+    fn tags_formatting() {
+        let local_date = FixedOffset::east(4 * 3600).ymd(2020, 1, 1).and_hms(9, 10, 11);
+        let score1 = DailyScore {
+            score: 1,
+            comment: Some("foo || bar".to_string()),
+            tags: vec!["run".to_string(), "games".to_string()].into_iter().collect(),
+            datetime: local_date.into()
+        };
+
+        let score2 = DailyScore {
+            score: 1,
+            comment: None,
+            tags: HashSet::new(),
+            datetime: local_date.into()
+        };
+
+        let score3 = DailyScore {
+            score: 1,
+            comment: None,
+            tags: vec!["run".to_string()].into_iter().collect(),
+            datetime: local_date.into()
+        };
+
+        assert_eq!(score1.tags_string(), "games,run");
+        assert_eq!(score2.tags_string(), "");
+        assert_eq!(score3.tags_string(), "run");
+    }
 
     #[test]
     fn string_formatting() {
@@ -129,6 +158,16 @@ mod tests {
         assert_eq!(daily_score.comment, Some("foo || bar".to_string()));
         assert_eq!(daily_score.tags, HashSet::new());
         assert_eq!(Utc.ymd(2020, 2, 1).and_hms(7, 10, 11), daily_score.datetime);
+
+        let daily_score_no_comment_string = "2020-02-01 09:10:11 +0200 | 1 | foo |";
+        let daily_score_no_comment_parse_result = DailyScore::parse(daily_score_no_comment_string);
+
+        assert!(daily_score_no_comment_parse_result.is_ok());
+
+        let daily_score = daily_score_no_comment_parse_result.unwrap();
+        assert_eq!(daily_score.comment, Some("".to_string()));
+        assert_eq!(daily_score.tags.len(), 1);
+        assert!(daily_score.tags.contains("foo"));
     }
 
     #[test]

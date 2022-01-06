@@ -1,12 +1,7 @@
-//use std::{io, fmt};
-//use std::io::{BufRead, BufReader};
-//use std::fs::OpenOptions;
 use std::error::Error;
 use std::collections::HashSet;
 use std::fmt;
 
-//use crate::daily_score;
-//use crate::daily_score::DailyScore;
 use crate::mood_report::MoodReport;
 use crate::Config;
 use crate::journal;

@@ -1,3 +1,6 @@
+use simple_excel_writer as excel;
+use excel::{row, Row, Workbook, Column};
+
 use std::fs::OpenOptions;
 use crate::daily_score;
 use crate::daily_score::DailyScore;
@@ -10,6 +13,7 @@ pub enum JournalError {
     CannotOpenFile { file_path: String, open_error: io::Error },
     CannotReadLine { file_path: String, read_error: io::Error },
     DailyScoreParseError { line: String, daily_score_parse_error: daily_score::ParseError },
+    XlsxWriteError(io::Error),
 }
 
 impl fmt::Display for JournalError {
@@ -18,6 +22,7 @@ impl fmt::Display for JournalError {
             Self::CannotOpenFile { file_path, open_error: _ } => write!(f, "cannot open journal file '{}'", file_path),
             Self::CannotReadLine { file_path, read_error: _ } => write!(f, "cannot read line from journal file '{}'", file_path),
             Self::DailyScoreParseError { line, daily_score_parse_error: _ } => write!(f, "cannot parse daily score data '{}'", line),
+            Self::XlsxWriteError(_) => write!(f, "cannot write to xlsx file"),
         }
     }
 }
@@ -28,6 +33,7 @@ impl std::error::Error for JournalError {
             Self::CannotOpenFile { file_path: _, open_error } => Some(open_error),
             Self::CannotReadLine { file_path: _, read_error } => Some(read_error),
             Self::DailyScoreParseError { line: _, daily_score_parse_error } => Some(daily_score_parse_error),
+            Self::XlsxWriteError(error) => Some(error),
         }
     }
 }
@@ -61,6 +67,37 @@ pub fn read(file_path: &str) -> Result<Vec<DailyScore>, JournalError> {
         records.push(daily_score);
     }
     Ok(records)
+}
+
+pub fn write_xlsx(file_path: &str, daily_scores: &Vec<DailyScore>) -> Result<(), JournalError> {
+    let mut wb = Workbook::create(file_path);
+    let mut sheet = wb.create_sheet("Daily Scores");
+    sheet.add_column(Column { width: 20.0 });
+    sheet.add_column(Column { width: 5.0 });
+    sheet.add_column(Column { width: 40.0 });
+    sheet.add_column(Column { width: 50.0 });
+
+    wb.write_sheet(&mut sheet, |sheet_writer| {
+        sheet_writer.append_row(row!["Date", "Score","Tags","Comment"])?;
+
+        for daily_score in daily_scores.iter() {
+            let comment = match &daily_score.comment {
+                Some(string) => string.as_str(),
+                None => "",
+            };
+
+            sheet_writer
+                .append_row(row![
+                            daily_score.datetime.date().naive_local(),
+                            daily_score.score as f64,
+                            daily_score.tags_string(),
+                            comment
+                ])?
+        };
+        Ok(())
+    }).map_err(|xlsx_error| JournalError::XlsxWriteError(xlsx_error))?;
+
+    Ok(())
 }
 
 

@@ -1,19 +1,21 @@
-use std::fmt;
-use std::num;
+use std::{fmt, num};
 use std::error::Error;
 use std::ops::Deref;
 use std::collections::HashSet;
 
 use crate::add_command::{AddCommand, AddCommandError};
 use crate::mood_command::{MoodCommand, MoodReportType, MoodCommandError};
+use crate::export_command::{ExportCommand, ExportType, ExportCommandError};
 
 const JOURNAL_FILE_PATH: &str = "./howdy.journal";
+const XLSX_FILE_PATH: &str = "./howdy_journal.xlsx";
 const JOURNAL_SEPARATOR: char = '|';
 const TAGS_SEPARATOR: &str = ",";
 
 mod daily_score;
 mod add_command;
 mod mood_command;
+mod export_command;
 mod mood_report;
 mod journal;
 mod test_helpers;
@@ -64,6 +66,12 @@ impl From<AddCommandError> for CliError {
 
 impl From<MoodCommandError> for CliError {
     fn from(error: mood_command::MoodCommandError) -> Self {
+        Self::CommandExecutionError(Box::new(error))
+    }
+}
+
+impl From<ExportCommandError> for CliError {
+    fn from(error: export_command::ExportCommandError) -> Self {
         Self::CommandExecutionError(Box::new(error))
     }
 }
@@ -133,6 +141,16 @@ fn build_mood_command<I>(mut args: I, config: Config) -> Result<MoodCommand, Cli
     Ok(MoodCommand { report_type, config, tags })
 }
 
+fn build_export_command<I>(mut args: I, config: Config) -> Result<ExportCommand, CliError>
+    where
+    I: Iterator<Item = String>,
+{
+    let file_path = args.next().unwrap_or(XLSX_FILE_PATH.to_string());
+    let export_type = ExportType::Xlsx;
+
+    Ok(ExportCommand { config, export_type, file_path })
+}
+
 pub fn run<I>(mut cli_args: I) -> Result<(), CliError>
 where
     I: Iterator<Item = String>,
@@ -151,6 +169,7 @@ where
     match argument.as_str() {
         "add" => build_add_command(cli_args, config)?.run()?,
         "mood" => build_mood_command(cli_args, config)?.run()?,
+        "export" => build_export_command(cli_args, config)?.run()?,
         unrecognized_command => return Err(CliError::CommandNotRecognized(unrecognized_command.to_string())),
     }
 
